@@ -1,0 +1,9 @@
+[Unit]
+Description=Touchscreen MQTT Listener
+
+[Service]
+ExecStart=/usr/bin/python3 /home/%u/touch_mqtt.py
+Restart=always
+
+[Install]
+WantedBy=default.target

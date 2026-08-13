@@ -1,0 +1,14 @@
+[Unit]
+Description=Chromium Kiosk
+After=graphical-session.target
+
+[Service]
+Environment=DISPLAY=:0.0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/pi/bus
+Type=simple
+ExecStart=/bin/bash /home/pi/kiosk.sh
+Restart=on-abort
+
+[Install]
+WantedBy=default.target
