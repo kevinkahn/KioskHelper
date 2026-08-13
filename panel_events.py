@@ -13,6 +13,24 @@ TOPIC_TOUCH = f"wallpanel/{nodename}/touch"
 TOPIC_BRIGHTNESS = f"wallpanel/{nodename}/brightness"
 print(f"Topic: {TOPIC_BRIGHTNESS}")
 
+def get_brightness():
+    # 1. Check for kernel backlight devices
+    backlight_root = "/sys/class/backlight"
+    if os.path.isdir(backlight_root):
+        devices = os.listdir(backlight_root)
+        if devices:
+            # Use the first available backlight device
+            dev = devices[0]
+            brightness_file = os.path.join(backlight_root, dev, "brightness")
+
+            try:
+                with open(brightness_file, "w") as f:
+                    v = f.read()
+                print(f"Got [v] ")
+                return v
+            except Exception as e:
+                print(f"[brightness] Failed reading from {brightness_file}: {e}")
+
 def set_brightness(value):
     # 1. Check for kernel backlight devices
     backlight_root = "/sys/class/backlight"
@@ -85,8 +103,9 @@ def touch_thread():
 
     for event in dev.read_loop():
         if event.type == ecodes.EV_KEY and event.value == 1:
-            publish.single(TOPIC_TOUCH, "touch", hostname=MQTT_HOST)
-            print("[touch] Touch event sent")
+            v = get_brightness()
+            publish.single(TOPIC_TOUCH, str(v), hostname=MQTT_HOST)
+            print(f"{v} Touch event sent")
 
 
 # ---------------------------
