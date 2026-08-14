@@ -9,7 +9,7 @@ chmod +x panel_events.py kiosk.sh
 mv panel_events.py ~/bin
 mv kiosk.sh ~/bin
 python3 -m venv /home/pi/kiosk/venv
-source /home/pi/myproject/venv/bin/activate
+source /home/pi/kiosk/venv/bin/activate
 pip install --upgrade pip
 pip install paho-mqtt evdev
 systemctl --user daemon-reload

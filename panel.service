@@ -1,5 +1,6 @@
 [Unit]
 Description=TKiosk Support Daemon
+After=graphical-session.target
 
 [Service]
 ExecStart=/home/pi/kiosk/venv/bin/python3 /home/%u/bin/panel_events.py

@@ -10,7 +10,9 @@ import os, glob
 nodename = os.uname().nodename
 MQTT_HOST = "pdxhome.pdxhome"
 TOPIC_TOUCH = f"wallpanel/{nodename}/touch"
+TOPIC_ANNOUNCE = f"wallpanel/{nodename}/announce"
 TOPIC_BRIGHTNESS = f"wallpanel/{nodename}/brightness"
+TOPIC_CONTROL = f"wallpanel/{nodename}/control"
 print(f"Topic: {TOPIC_BRIGHTNESS}")
 
 def get_brightness():
@@ -24,7 +26,7 @@ def get_brightness():
             brightness_file = os.path.join(backlight_root, dev, "brightness")
 
             try:
-                with open(brightness_file, "w") as f:
+                with open(brightness_file, "r") as f:
                     v = f.read()
                 print(f"Got [v] ")
                 return v
@@ -76,10 +78,15 @@ def find_touchscreen_event():
 # ---------------------------
 def on_message(client, userdata, msg):
     try:
-        value = int(msg.payload.decode())
-        print(f"Bright req: {msg.payload.decode()}  {value}")
-        value = max(0, min(255, value))
-        set_brightness(value)
+        topic = msg.topic
+        print(f'[on_message] Topic: {topic}')
+        if topic == TOPIC_ANNOUNCE:
+            value = int(msg.payload.decode())
+            print(f"Bright req: {msg.payload.decode()}  {value}")
+            value = max(0, min(255, value))
+            set_brightness(value)
+        else:
+            print(f"[on_message] Unhandled Topic: {topic}")
     except Exception as e:
         print("[brightness] Error:", e)
 
@@ -88,6 +95,7 @@ def mqtt_thread():
     client = mqtt.Client()
     client.connect(MQTT_HOST)
     client.subscribe(TOPIC_BRIGHTNESS)
+    client.subscribe(TOPIC_CONTROL)
     client.on_message = on_message
     client.loop_forever()
 
@@ -112,5 +120,7 @@ def touch_thread():
 # Start both threads
 # ---------------------------
 if __name__ == "__main__":
+    set_brightness(255)
+    publish.single(TOPIC_ANNOUNCE, str(255), hostname=MQTT_HOST)
     threading.Thread(target=mqtt_thread, daemon=True).start()
     touch_thread()
