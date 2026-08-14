@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #git clone https://github.com/kevinkahn/KioskHelper.git /home/pi/kiosk
+cd ~
 mkdir -p ~/bin
 mkdir -p ~/.config/systemd/user
 cd kiosk
