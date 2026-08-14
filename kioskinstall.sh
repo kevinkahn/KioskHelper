@@ -5,7 +5,7 @@ mkdir -p ~/.config/systemd/user
 cd kiosk
 mv kiosk.service ~/.config/systemd/user
 mv panel.service ~/.config/systemd/user
-chmod +x panel_event.py kiosk.sh
+chmod +x panel_events.py kiosk.sh
 mv panel_events.py ~/bin
 mv kiosk.sh ~/bin
 python3 -m venv /home/pi/kiosk/venv
