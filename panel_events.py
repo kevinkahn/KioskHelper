@@ -13,6 +13,8 @@ TOPIC_TOUCH = f"wallpanel/{nodename}/touch"
 TOPIC_ANNOUNCE = f"wallpanel/{nodename}/announce"
 TOPIC_BRIGHTNESS = f"wallpanel/{nodename}/brightness"
 TOPIC_CONTROL = f"wallpanel/{nodename}/control"
+TOPIC_ALL_BRIGHTNESS = f"wallpanel/pdxall/all_brightness"
+TOPIC_ALL_CONTROL = f"wallpanel/pdxall/all_control"
 print(f"Topic: {TOPIC_BRIGHTNESS}")
 
 def get_brightness():
@@ -104,6 +106,8 @@ def mqtt_thread():
     client.connect(MQTT_HOST)
     client.subscribe(TOPIC_BRIGHTNESS)
     client.subscribe(TOPIC_CONTROL)
+    client.subscribe(TOPIC_ALL_BRIGHTNESS)
+    client.subscribe(TOPIC_ALL_CONTROL)
     client.on_message = on_message
     client.loop_forever()
 
