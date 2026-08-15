@@ -86,7 +86,15 @@ def on_message(client, userdata, msg):
             value = max(0, min(255, value))
             set_brightness(value)
         else:
-            print(f"[on_message] Unhandled Topic: {topic}")
+            value = msg.payload.decode()
+            print(f"[on_message] Unhandled Topic: {topic}  {value}")
+            if value == 'reboot':
+                print("[reboot] Rebooting")
+                os.system("sudo reboot")
+            elif value == 'restart  ':
+                print("[shutdown] Restart")
+                os.system("systemctl --user restart kiosk")
+                os.system("systemctl --user restart panel")
     except Exception as e:
         print("[brightness] Error:", e)
 
