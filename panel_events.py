@@ -4,18 +4,38 @@ import threading
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
 from evdev import InputDevice, ecodes
-import subprocess
+import socket
 import os, glob
 
 nodename = os.uname().nodename
+
 MQTT_HOST = "pdxhome.pdxhome"
 TOPIC_TOUCH = f"wallpanel/{nodename}/touch"
 TOPIC_ANNOUNCE = f"wallpanel/{nodename}/announce"
 TOPIC_BRIGHTNESS = f"wallpanel/{nodename}/brightness"
 TOPIC_CONTROL = f"wallpanel/{nodename}/control"
-TOPIC_ALL_BRIGHTNESS = f"wallpanel/pdxall/all_brightness"
-TOPIC_ALL_CONTROL = f"wallpanel/pdxall/all_control"
-print(f"Topic: {TOPIC_BRIGHTNESS}")
+TOPIC_ALL_BRIGHTNESS = f"wallpanel/all/brightness"
+TOPIC_ALL_CONTROL = f"wallpanel/all/control"
+
+
+def get_local_ip_gp():
+   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+   try:
+     # Does not have to be reachable to extract the local interface IP
+        s.connect(('8.8.8.8', 1))
+        ip = s.getsockname()[0]
+   except Exception:
+        ip = '127.0.0.1'
+   finally:
+        s.close()
+   return int(ip.split('.')[2])
+
+locationgp = ('error', 'pdx', 'pgaw')[get_local_ip_gp()]
+TOPIC_GP_BRIGHTNESS = f"wallpanel/{locationgp}/brightness"
+TOPIC_GP_CONTROL = f"wallpanel/{locationgp}/control"
+
+CONTROL_TOPICS = [TOPIC_CONTROL, TOPIC_GP_CONTROL, TOPIC_ALL_CONTROL]
+BRIGHTNESS_TOPICS = [TOPIC_BRIGHTNESS, TOPIC_GP_BRIGHTNESS, TOPIC_ALL_BRIGHTNESS]
 
 def get_brightness():
     # 1. Check for kernel backlight devices
@@ -104,10 +124,12 @@ def on_message(client, userdata, msg):
 def mqtt_thread():
     client = mqtt.Client()
     client.connect(MQTT_HOST)
-    client.subscribe(TOPIC_BRIGHTNESS)
-    client.subscribe(TOPIC_CONTROL)
-    client.subscribe(TOPIC_ALL_BRIGHTNESS)
-    client.subscribe(TOPIC_ALL_CONTROL)
+    for topic in CONTROL_TOPICS:
+        client.subscribe(topic)
+        print(f"[mqtt] Subscribed to {topic}")
+    for topic in BRIGHTNESS_TOPICS:
+        client.subscribe(topic)
+        print(f"[mqtt] Subscribed to {topic}")
     client.on_message = on_message
     client.loop_forever()
 
