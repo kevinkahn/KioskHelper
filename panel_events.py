@@ -102,7 +102,7 @@ def on_message(client, userdata, msg):
     try:
         topic = msg.topic
         print(f'[on_message] Topic: {topic}')
-        if topic == TOPIC_ANNOUNCE:
+        if topic == TOPIC_BRIGHTNESS:
             value = int(msg.payload.decode())
             print(f"Bright req: {msg.payload.decode()}  {value}")
             value = max(0, min(255, value))
