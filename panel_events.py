@@ -1,21 +1,37 @@
 #/usr/bin/env python3
-
+import subprocess
 import threading
+from signal import signal
+
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
 from evdev import InputDevice, ecodes
 import socket
-import os, glob
+import os, glob, time, sys
+import signal
 
+def handle_sigterm(signum, frame):
+    """Callback function triggered when SIGTERM is received."""
+    print(f"Received SIGTERM (signal {signum}). Cleaning up resources...")
+    try:
+        browser.terminate()
+        print("Terminated browser")
+    except Exception as e:
+        print(f"Failed to terminate browser: {e}")
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, handle_sigterm)
+browser = None
 nodename = os.uname().nodename
-
-MQTT_HOST = "pdxhome.pdxhome"
+kioskdashboard = None
+MQTT_HOST = "mqtt"
 TOPIC_TOUCH = f"wallpanel/{nodename}/touch"
 TOPIC_ANNOUNCE = f"wallpanel/{nodename}/announce"
 TOPIC_BRIGHTNESS = f"wallpanel/{nodename}/brightness"
 TOPIC_CONTROL = f"wallpanel/{nodename}/control"
 TOPIC_ALL_BRIGHTNESS = f"wallpanel/all/brightness"
 TOPIC_ALL_CONTROL = f"wallpanel/all/control"
+TOPIC_DASHINFO = f"wallpanel/{nodename}/assign"
 
 
 def get_local_ip_gp():
@@ -36,6 +52,7 @@ TOPIC_GP_CONTROL = f"wallpanel/{locationgp}/control"
 
 CONTROL_TOPICS = [TOPIC_CONTROL, TOPIC_GP_CONTROL, TOPIC_ALL_CONTROL]
 BRIGHTNESS_TOPICS = [TOPIC_BRIGHTNESS, TOPIC_GP_BRIGHTNESS, TOPIC_ALL_BRIGHTNESS]
+ANNOUNCE_TOPICS =[TOPIC_DASHINFO]
 
 def get_brightness():
     # 1. Check for kernel backlight devices
@@ -99,6 +116,7 @@ def find_touchscreen_event():
 # MQTT Brightness Listener
 # ---------------------------
 def on_message(client, userdata, msg):
+    global kioskdashboard
     try:
         topic = msg.topic
         print(f'[on_message] Topic: {topic}')
@@ -107,9 +125,9 @@ def on_message(client, userdata, msg):
             print(f"Bright req: {msg.payload.decode()}  {value}")
             value = max(0, min(255, value))
             set_brightness(value)
-        else:
+        elif topic == TOPIC_CONTROL:
             value = msg.payload.decode()
-            print(f"[on_message] Unhandled Topic: {topic}  {value}")
+            print(f"[on_message] Control Topic: {topic}  {value}")
             if value == 'reboot':
                 print("[reboot] Rebooting")
                 os.system("sudo reboot")
@@ -117,8 +135,19 @@ def on_message(client, userdata, msg):
                 print("[shutdown] Restart")
                 os.system("systemctl --user restart kiosk")
                 os.system("systemctl --user restart panel")
+            elif value == 'started':
+                publish.single(TOPIC_ANNOUNCE, str(255), hostname=MQTT_HOST)
+            else:
+                print(f"[on_message] Unknown control command: {value}")
+        elif topic == TOPIC_DASHINFO:
+            value = msg.payload.decode()
+            print(f"[on_message] Announce Topic: {topic}  {value}")
+            kioskdashboard = f"{value}/0"
+
+
+
     except Exception as e:
-        print("[brightness] Error:", e)
+        print(f"MQTT Error {e}")
 
 
 def mqtt_thread():
@@ -126,10 +155,11 @@ def mqtt_thread():
     client.connect(MQTT_HOST)
     for topic in CONTROL_TOPICS:
         client.subscribe(topic)
-        print(f"[mqtt] Subscribed to {topic}")
     for topic in BRIGHTNESS_TOPICS:
         client.subscribe(topic)
-        print(f"[mqtt] Subscribed to {topic}")
+    for topic in ANNOUNCE_TOPICS:
+        client.subscribe(topic)
+    print("Subscribed to all topics")
     client.on_message = on_message
     client.loop_forever()
 
@@ -149,12 +179,47 @@ def touch_thread():
             publish.single(TOPIC_TOUCH, str(v), hostname=MQTT_HOST)
             print(f"{v} Touch event sent")
 
+def start_browser(url, nodename):
+
+    actualurl = f"{url}?browser_id=kiosk_{nodename}"
+    print(f"[start_browser] Starting in {actualurl}")
+
+    browser = subprocess.Popen([
+        "/usr/lib/chromium/chromium",
+        "--kiosk",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--noerrdialogs",
+        "--disable-infobars",
+        "--password-store=basic",
+        "--user-data-dir=/home/pi/.config/chromium"
+        #"--user-data-dir=/home/pi/.ha_chrome_profile"
+        , actualurl] )
+    print("Browser started")
+    return browser
+
+    '''
+    try:
+        result = subprocess.run(['bash', '/home/pi/bin/kiosk.sh'], capture_output=True, text=True)
+        print("Cleaned up")
+        print("STDOUT:", result.stdout)
+        print("STDERR:", result.stderr)
+    except Exception as e:
+        print(f"Cleaned up: {e}")
+    '''
+
 
 # ---------------------------
 # Start both threads
 # ---------------------------
 if __name__ == "__main__":
     set_brightness(255)
-    publish.single(TOPIC_ANNOUNCE, str(255), hostname=MQTT_HOST)
     threading.Thread(target=mqtt_thread, daemon=True).start()
+    print('started listener')
+    publish.single(TOPIC_ANNOUNCE, "", hostname=MQTT_HOST)
+    print("await")
+    while kioskdashboard is None:
+        time.sleep(1)
+    print(f"Kiosk dashboard: {kioskdashboard}")
+    browser = start_browser(kioskdashboard, nodename)
     touch_thread()
