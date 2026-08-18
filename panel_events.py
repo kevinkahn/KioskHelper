@@ -1,4 +1,5 @@
 #/usr/bin/env python3
+import json
 import subprocess
 import threading
 from signal import signal
@@ -23,15 +24,19 @@ def handle_sigterm(signum, frame):
 signal.signal(signal.SIGTERM, handle_sigterm)
 browser = None
 nodename = os.uname().nodename
-kioskdashboard = None
-MQTT_HOST = "mqtt"
+entityprefix = f"kiosk_{nodename.replace('rpi_','')}"
+entityid = f"{entityprefix}_baaseurl"
+kiosk_baseurl = None
+MQTT_HOST = "mqtt.pdxhome"
+HA_ID = 'HASS'
 TOPIC_TOUCH = f"wallpanel/{nodename}/touch"
-TOPIC_ANNOUNCE = f"wallpanel/{nodename}/announce"
 TOPIC_BRIGHTNESS = f"wallpanel/{nodename}/brightness"
 TOPIC_CONTROL = f"wallpanel/{nodename}/control"
 TOPIC_ALL_BRIGHTNESS = f"wallpanel/all/brightness"
 TOPIC_ALL_CONTROL = f"wallpanel/all/control"
-TOPIC_DASHINFO = f"wallpanel/{nodename}/assign"
+DISCOVERY_TOPIC = f"{HA_ID}/text/{entityid}/config"
+STATE_TOPIC = f"{HA_ID}/text/{entityid}/state"
+COMMAND_TOPIC = f"{HA_ID}/text/{entityid}/set"
 
 
 def get_local_ip_gp():
@@ -52,7 +57,7 @@ TOPIC_GP_CONTROL = f"wallpanel/{locationgp}/control"
 
 CONTROL_TOPICS = [TOPIC_CONTROL, TOPIC_GP_CONTROL, TOPIC_ALL_CONTROL]
 BRIGHTNESS_TOPICS = [TOPIC_BRIGHTNESS, TOPIC_GP_BRIGHTNESS, TOPIC_ALL_BRIGHTNESS]
-ANNOUNCE_TOPICS =[TOPIC_DASHINFO]
+
 
 def get_brightness():
     # 1. Check for kernel backlight devices
@@ -116,7 +121,7 @@ def find_touchscreen_event():
 # MQTT Brightness Listener
 # ---------------------------
 def on_message(client, userdata, msg):
-    global kioskdashboard
+    global kiosk_baseurl
     try:
         topic = msg.topic
         print(f'[on_message] Topic: {topic}')
@@ -127,22 +132,20 @@ def on_message(client, userdata, msg):
             set_brightness(value)
         elif topic == TOPIC_CONTROL:
             value = msg.payload.decode()
-            print(f"[on_message] Control Topic: {topic}  {value}")
+            print(f"[on_message] Control Topic: x{topic}x  x{value}x")
             if value == 'reboot':
                 print("[reboot] Rebooting")
                 os.system("sudo reboot")
-            elif value == 'restart  ':
+            elif value == 'restart':
                 print("[shutdown] Restart")
                 os.system("systemctl --user restart kiosk")
                 os.system("systemctl --user restart panel")
-            elif value == 'started':
-                publish.single(TOPIC_ANNOUNCE, str(255), hostname=MQTT_HOST)
             else:
-                print(f"[on_message] Unknown control command: {value}")
-        elif topic == TOPIC_DASHINFO:
+                print(f"[on_message] Unknown MQTT command: {value}")
+        elif topic == STATE_TOPIC:
             value = msg.payload.decode()
             print(f"[on_message] Announce Topic: {topic}  {value}")
-            kioskdashboard = f"{value}/0"
+            kiosk_baseurl = f"{value}"
 
 
 
@@ -154,11 +157,13 @@ def mqtt_thread():
     client = mqtt.Client()
     client.connect(MQTT_HOST)
     for topic in CONTROL_TOPICS:
+        print("Subscribing to topic", topic)
         client.subscribe(topic)
     for topic in BRIGHTNESS_TOPICS:
+        print("Subscribing to topic", topic)
         client.subscribe(topic)
-    for topic in ANNOUNCE_TOPICS:
-        client.subscribe(topic)
+    print("Subscribing to topic", STATE_TOPIC)
+    client.subscribe(STATE_TOPIC)
     print("Subscribed to all topics")
     client.on_message = on_message
     client.loop_forever()
@@ -180,8 +185,8 @@ def touch_thread():
             print(f"{v} Touch event sent")
 
 def start_browser(url, nodename):
-
-    actualurl = f"{url}?browser_id=kiosk_{nodename}"
+    kioskid = f"kiosk_{nodename.replace('rpi-','')}"
+    actualurl = f"{url}?browser_id={kioskid}"
     print(f"[start_browser] Starting in {actualurl}")
 
     browser = subprocess.Popen([
@@ -216,10 +221,38 @@ if __name__ == "__main__":
     set_brightness(255)
     threading.Thread(target=mqtt_thread, daemon=True).start()
     print('started listener')
-    publish.single(TOPIC_ANNOUNCE, "", hostname=MQTT_HOST)
-    print("await")
-    while kioskdashboard is None:
+    #publish.single('wallp/test/test','tesinp',hostname='pdxhome.pdxhome', retain=True)
+    #publish.single(TOPIC_ANNOUNCE, "empty", hostname=MQTT_HOST)
+    time.sleep(1)
+    print(f"await")
+    msgwait = -1
+    if kiosk_baseurl is None:
+        print('Initializing kiosk in HA')
+        discovery_payload = {
+            "name": f"{nodename} Baseurl",
+            "unique_id": f"uid_{entityid}",
+            "state_topic": STATE_TOPIC,
+            "command_topic": COMMAND_TOPIC,  # <--- Tells HA where to send UI changes
+            "command_template": "{{ value }}",  # Sends just the raw string to the broker
+            "min": 1,
+            "max": 100,
+            "icon": "mdi:text-box-edit",
+            "mode": "text"
+        }
+        print(f"discovery payload: {discovery_payload}")
+        print(f"Discovery topic: {DISCOVERY_TOPIC}")
+        publish.single(DISCOVERY_TOPIC, json.dumps(discovery_payload), hostname=MQTT_HOST, retain=True)
+        kiosk_baseurl = "unset"
+        publish.single(STATE_TOPIC, kiosk_baseurl, hostname=MQTT_HOST, retain=True)
         time.sleep(1)
-    print(f"Kiosk dashboard: {kioskdashboard}")
-    browser = start_browser(kioskdashboard, nodename)
+
+    while kiosk_baseurl == "unset":
+        if msgwait < 0:
+            print("Waiting for real baseurl to set")
+            msgwait = 30
+        else:
+            msgwait -= 1
+        time.sleep(1)
+    print(f"Kiosk dashboard: {kiosk_baseurl}")
+    browser = start_browser(kiosk_baseurl, nodename)
     touch_thread()
