@@ -10,6 +10,8 @@ from evdev import InputDevice, ecodes
 import socket
 import os, glob, time, sys
 import signal
+from pathlib import Path
+
 
 def handle_sigterm(signum, frame):
     """Callback function triggered when SIGTERM is received."""
@@ -27,6 +29,7 @@ nodename = os.uname().nodename
 entityprefix = f"kiosk_{nodename.replace('rpi_','')}"
 entityid = f"{entityprefix}_baaseurl"
 kiosk_baseurl = None
+
 MQTT_HOST = "mqtt.pdxhome"
 HA_ID = 'HASS'
 TOPIC_TOUCH = f"wallpanel/{nodename}/touch"
@@ -37,6 +40,7 @@ TOPIC_ALL_CONTROL = f"wallpanel/all/control"
 DISCOVERY_TOPIC = f"{HA_ID}/text/{entityid}/config"
 STATE_TOPIC = f"{HA_ID}/text/{entityid}/state"
 COMMAND_TOPIC = f"{HA_ID}/text/{entityid}/set"
+HAIP="0.0.0.0"
 
 
 def get_local_ip_gp():
@@ -121,7 +125,7 @@ def find_touchscreen_event():
 # MQTT Brightness Listener
 # ---------------------------
 def on_message(client, userdata, msg):
-    global kiosk_baseurl
+    global kiosk_baseurl, HAIP
     try:
         topic = msg.topic
         print(f'[on_message] Topic: {topic}')
@@ -146,6 +150,9 @@ def on_message(client, userdata, msg):
             value = msg.payload.decode()
             print(f"[on_message] Announce Topic: {topic}  {value}")
             kiosk_baseurl = f"{value}"
+        elif topic == "homeassistant/ip":
+            HAIP = msg.payload.decode()
+            print(f"[homeassistant/ip] Home Assistant IP: {HAIP}")
 
 
 
@@ -157,13 +164,11 @@ def mqtt_thread():
     client = mqtt.Client()
     client.connect(MQTT_HOST)
     for topic in CONTROL_TOPICS:
-        print("Subscribing to topic", topic)
         client.subscribe(topic)
     for topic in BRIGHTNESS_TOPICS:
-        print("Subscribing to topic", topic)
         client.subscribe(topic)
-    print("Subscribing to topic", STATE_TOPIC)
     client.subscribe(STATE_TOPIC)
+    client.subscribe("homeassistant/ip")
     print("Subscribed to all topics")
     client.on_message = on_message
     client.loop_forever()
@@ -186,8 +191,37 @@ def touch_thread():
 
 def start_browser(url, nodename):
     kioskid = f"kiosk_{nodename.replace('rpi-','')}"
-    actualurl = f"{url}?browser_id={kioskid}"
+    actualurl = f"{url}"
     print(f"[start_browser] Starting in {actualurl}")
+
+    profile_dir = "/home/pi/.config/chromium-kioskscreen"
+    profilepath = Path(profile_dir)
+    if profilepath.is_dir():
+        print('Not first run')
+    else:
+        print('Do first time initialization')
+        browser = subprocess.run([
+            "/usr/lib/chromium/chromium",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--noerrdialogs",
+            "--disable-infobars",
+            "--password-store=basic",
+            f"--user-data-dir={profile_dir}",
+            f"{HAIP}:8123/lovelace/0"])
+        print("Output:", browser.stdout)
+        print("Errors:", browser.stderr)
+        print("Exit Code:", browser.returncode)
+        print("Finished first time run")
+
+        # Remove lingering Chromium lock files before starting
+        for lock_file in ["SingletonLock", "SingletonCookie", "SingletonSocket"]:
+            file_path = os.path.join(profile_dir, lock_file)
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except OSError:
+                    pass
 
     browser = subprocess.Popen([
         "/usr/lib/chromium/chromium",
@@ -197,9 +231,8 @@ def start_browser(url, nodename):
         "--noerrdialogs",
         "--disable-infobars",
         "--password-store=basic",
-        "--user-data-dir=/home/pi/.config/chromium"
-        #"--user-data-dir=/home/pi/.ha_chrome_profile"
-        , actualurl] )
+        "--user-data-dir=/home/pi/.config/chromium-kioskscreen",
+        actualurl] )
     print("Browser started")
     return browser
 
@@ -221,9 +254,9 @@ if __name__ == "__main__":
     set_brightness(255)
     threading.Thread(target=mqtt_thread, daemon=True).start()
     print('started listener')
-    #publish.single('wallp/test/test','tesinp',hostname='pdxhome.pdxhome', retain=True)
-    #publish.single(TOPIC_ANNOUNCE, "empty", hostname=MQTT_HOST)
     time.sleep(1)
+
+
     print(f"await")
     msgwait = -1
     if kiosk_baseurl is None:
@@ -253,6 +286,6 @@ if __name__ == "__main__":
         else:
             msgwait -= 1
         time.sleep(1)
-    print(f"Kiosk dashboard: {kiosk_baseurl}")
+    print(f"Kiosk dashboard passed to start browser: {kiosk_baseurl}")
     browser = start_browser(kiosk_baseurl, nodename)
     touch_thread()

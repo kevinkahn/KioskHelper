@@ -33,7 +33,10 @@ echo "<labwc_config>
   </keyboard>
 </labwc_config>
 " >> rc.xml
-
+echo "On pi desktop open browser with:"
+echo "/usr/lib/chromium/chromium --user-deta-dir=/home/pi/.config/chromium-kioskscreen 192.168.1.15:8123?browser_ID=kiosk_dev7x"
+echo "log in as kioskscreen, a"
+echo "Open browser_mod from side panel and set the browser id in the name box"
 
 
 
