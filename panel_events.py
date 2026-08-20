@@ -2,7 +2,7 @@
 import json
 import subprocess
 import threading
-from signal import signal
+import panelbrightness as pb
 
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
@@ -23,27 +23,8 @@ def handle_sigterm(signum, frame):
         print(f"Failed to terminate browser: {e}")
     sys.exit(0)
 
-signal.signal(signal.SIGTERM, handle_sigterm)
-browser = None
-nodename = os.uname().nodename
-entityprefix = f"kiosk_{nodename.replace('rpi_','')}"
-entityid = f"{entityprefix}_baaseurl"
-kiosk_baseurl = None
-
-MQTT_HOST = "mqtt.pdxhome"
-HA_ID = 'HASS'
-TOPIC_TOUCH = f"wallpanel/{nodename}/touch"
-TOPIC_BRIGHTNESS = f"wallpanel/{nodename}/brightness"
-TOPIC_CONTROL = f"wallpanel/{nodename}/control"
-TOPIC_ALL_BRIGHTNESS = f"wallpanel/all/brightness"
-TOPIC_ALL_CONTROL = f"wallpanel/all/control"
-DISCOVERY_TOPIC = f"{HA_ID}/text/{entityid}/config"
-STATE_TOPIC = f"{HA_ID}/text/{entityid}/state"
-COMMAND_TOPIC = f"{HA_ID}/text/{entityid}/set"
-HAIP="0.0.0.0"
-
-
 def get_local_ip_gp():
+    # return the local net number for choosing local HA
    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
    try:
      # Does not have to be reachable to extract the local interface IP
@@ -55,49 +36,41 @@ def get_local_ip_gp():
         s.close()
    return int(ip.split('.')[2])
 
-locationgp = ('error', 'pdx', 'pgaw')[get_local_ip_gp()]
-TOPIC_GP_BRIGHTNESS = f"wallpanel/{locationgp}/brightness"
+signal.signal(signal.SIGTERM, handle_sigterm)
+
+browser = None
+localnetcode = get_local_ip_gp()
+
+# Node name is pi dns name
+nodename = os.uname().nodename
+# Kiosk name is the name for the browser in HA
+kioskname = f"kiosk_{nodename.replace('rpi_','')}"
+kioskbaseurlentity = f"{kioskname}_baseurl"
+kiosk_baseurl = None  # actual url once established running
+
+locationgp = ('error', 'pdx', 'pgaw')[localnetcode] # user for group browser commands
+MQTT_HOST = "mqtt"
+HA_ID = ('error','HASS','HASSpga')[localnetcode]
+
+# MQTT topics
+TOPIC_TOUCH = f"wallpanel/{nodename}/touch"
+
+TOPIC_CONTROL = f"wallpanel/{nodename}/control"
 TOPIC_GP_CONTROL = f"wallpanel/{locationgp}/control"
+TOPIC_ALL_CONTROL = f"wallpanel/all/control"
+
+TOPIC_BRIGHTNESS = f"wallpanel/{nodename}/brightness"
+TOPIC_GP_BRIGHTNESS = f"wallpanel/{locationgp}/brightness"
+TOPIC_ALL_BRIGHTNESS = f"wallpanel/all/brightness"
+
+DISCOVERY_TOPIC = f"{HA_ID}/text/{kioskbaseurlentity}/config"
+STATE_TOPIC = f"{HA_ID}/text/{kioskbaseurlentity}/state"
+COMMAND_TOPIC = f"{HA_ID}/text/{kioskbaseurlentity}/set"
+HAIP="0.0.0.0"
 
 CONTROL_TOPICS = [TOPIC_CONTROL, TOPIC_GP_CONTROL, TOPIC_ALL_CONTROL]
 BRIGHTNESS_TOPICS = [TOPIC_BRIGHTNESS, TOPIC_GP_BRIGHTNESS, TOPIC_ALL_BRIGHTNESS]
 
-
-def get_brightness():
-    # 1. Check for kernel backlight devices
-    backlight_root = "/sys/class/backlight"
-    if os.path.isdir(backlight_root):
-        devices = os.listdir(backlight_root)
-        if devices:
-            # Use the first available backlight device
-            dev = devices[0]
-            brightness_file = os.path.join(backlight_root, dev, "brightness")
-
-            try:
-                with open(brightness_file, "r") as f:
-                    v = f.read()
-                print(f"Got [v] ")
-                return v
-            except Exception as e:
-                print(f"[brightness] Failed reading from {brightness_file}: {e}")
-
-def set_brightness(value):
-    # 1. Check for kernel backlight devices
-    backlight_root = "/sys/class/backlight"
-    if os.path.isdir(backlight_root):
-        devices = os.listdir(backlight_root)
-        if devices:
-            # Use the first available backlight device
-            dev = devices[0]
-            brightness_file = os.path.join(backlight_root, dev, "brightness")
-
-            try:
-                with open(brightness_file, "w") as f:
-                    f.write(str(value))
-                print(f"[brightness] Set {dev} to {value}")
-                return
-            except Exception as e:
-                print(f"[brightness] Failed writing to {brightness_file}: {e}")
 
 def find_touchscreen_event():
     candidates = glob.glob("/dev/input/event*")
@@ -133,23 +106,23 @@ def on_message(client, userdata, msg):
             value = int(msg.payload.decode())
             print(f"Bright req: {msg.payload.decode()}  {value}")
             value = max(0, min(255, value))
-            set_brightness(value)
+            pb.set_brightness(value)
         elif topic == TOPIC_CONTROL:
             value = msg.payload.decode()
             print(f"[on_message] Control Topic: x{topic}x  x{value}x")
             if value == 'reboot':
-                print("[reboot] Rebooting")
-                os.system("sudo reboot")
+                print("[reboot] Reboot node")
+                subprocess.run(["sudo", "reboot"])
             elif value == 'restart':
-                print("[shutdown] Restart")
-                os.system("systemctl --user restart kiosk")
-                os.system("systemctl --user restart panel")
+                print("[restart] Restart kiosk")
+                subprocess.run(["systemctl", "--user", "restart", "panel"])
             else:
                 print(f"[on_message] Unknown MQTT command: {value}")
         elif topic == STATE_TOPIC:
             value = msg.payload.decode()
             print(f"[on_message] Announce Topic: {topic}  {value}")
-            kiosk_baseurl = f"{value}"
+            # normalize to ip number so as not to confuse browser local storage
+            kiosk_baseurl = f"{HAIP}:8123{value.partition("8123")[2]}"
         elif topic == "homeassistant/ip":
             HAIP = msg.payload.decode()
             print(f"[homeassistant/ip] Home Assistant IP: {HAIP}")
@@ -185,43 +158,43 @@ def touch_thread():
 
     for event in dev.read_loop():
         if event.type == ecodes.EV_KEY and event.value == 1:
-            v = get_brightness()
+            v = pb.get_brightness()
             publish.single(TOPIC_TOUCH, str(v), hostname=MQTT_HOST)
             print(f"{v} Touch event sent")
 
+def initialize_browser_environment(profile_dir):
+    print("[initialize_browser_environment] Initializing")
+    browser = subprocess.run([
+        "/usr/lib/chromium/chromium",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--noerrdialogs",
+        "--disable-infobars",
+        "--password-store=basic",
+        f"--user-data-dir={profile_dir}",
+        f"{HAIP}:8123/lovelace/0"])
+    print("Output:", browser.stdout)
+    print("Errors:", browser.stderr)
+    print("Exit Code:", browser.returncode)
+    print("Finished first time run")
+
+    # Remove lingering Chromium lock files before starting
+    for lock_file in ["SingletonLock", "SingletonCookie", "SingletonSocket"]:
+        file_path = os.path.join(profile_dir, lock_file)
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except OSError:
+                pass
+
+
 def start_browser(url, nodename):
-    kioskid = f"kiosk_{nodename.replace('rpi-','')}"
-    actualurl = f"{url}"
-    print(f"[start_browser] Starting in {actualurl}")
+    print(f"[start_browser] Starting in {url}")
 
     profile_dir = "/home/pi/.config/chromium-kioskscreen"
     profilepath = Path(profile_dir)
-    if profilepath.is_dir():
-        print('Not first run')
-    else:
-        print('Do first time initialization')
-        browser = subprocess.run([
-            "/usr/lib/chromium/chromium",
-            "--no-first-run",
-            "--no-default-browser-check",
-            "--noerrdialogs",
-            "--disable-infobars",
-            "--password-store=basic",
-            f"--user-data-dir={profile_dir}",
-            f"{HAIP}:8123/lovelace/0"])
-        print("Output:", browser.stdout)
-        print("Errors:", browser.stderr)
-        print("Exit Code:", browser.returncode)
-        print("Finished first time run")
-
-        # Remove lingering Chromium lock files before starting
-        for lock_file in ["SingletonLock", "SingletonCookie", "SingletonSocket"]:
-            file_path = os.path.join(profile_dir, lock_file)
-            if os.path.exists(file_path):
-                try:
-                    os.remove(file_path)
-                except OSError:
-                    pass
+    if not profilepath.is_dir():
+        initialize_browser_environment(profile_dir)
 
     browser = subprocess.Popen([
         "/usr/lib/chromium/chromium",
@@ -232,7 +205,7 @@ def start_browser(url, nodename):
         "--disable-infobars",
         "--password-store=basic",
         "--user-data-dir=/home/pi/.config/chromium-kioskscreen",
-        actualurl] )
+        url] )
     print("Browser started")
     return browser
 
@@ -251,19 +224,17 @@ def start_browser(url, nodename):
 # Start both threads
 # ---------------------------
 if __name__ == "__main__":
-    set_brightness(255)
+    pb.set_brightness(255)
     threading.Thread(target=mqtt_thread, daemon=True).start()
     print('started listener')
     time.sleep(1)
 
-
-    print(f"await")
     msgwait = -1
-    if kiosk_baseurl is None:
+    if kiosk_baseurl is None: # haven't set up this kiosk in HA yet else retained MQTT message would have set this
         print('Initializing kiosk in HA')
         discovery_payload = {
             "name": f"{nodename} Baseurl",
-            "unique_id": f"uid_{entityid}",
+            "unique_id": f"uid_{kioskbaseurlentity}",
             "state_topic": STATE_TOPIC,
             "command_topic": COMMAND_TOPIC,  # <--- Tells HA where to send UI changes
             "command_template": "{{ value }}",  # Sends just the raw string to the broker
@@ -272,9 +243,8 @@ if __name__ == "__main__":
             "icon": "mdi:text-box-edit",
             "mode": "text"
         }
-        print(f"discovery payload: {discovery_payload}")
-        print(f"Discovery topic: {DISCOVERY_TOPIC}")
         publish.single(DISCOVERY_TOPIC, json.dumps(discovery_payload), hostname=MQTT_HOST, retain=True)
+        # now wait for user to set topic in HA
         kiosk_baseurl = "unset"
         publish.single(STATE_TOPIC, kiosk_baseurl, hostname=MQTT_HOST, retain=True)
         time.sleep(1)
