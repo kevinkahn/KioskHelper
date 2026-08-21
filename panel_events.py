@@ -44,16 +44,19 @@ localnetcode = get_local_ip_gp()
 # Node name is pi dns name
 nodename = os.uname().nodename
 # Kiosk name is the name for the browser in HA
-kioskname = f"kiosk_{nodename.replace('rpi_','')}"
+kioskname = f"kiosk_{nodename.replace('rpi-','')}"
 kioskbaseurlentity = f"{kioskname}_baseurl"
 kiosk_baseurl = None  # actual url once established running
+print(f"Kiosk Info: node: {nodename} kioskname: {kioskname} kioskbaseurlentity: {kioskbaseurlentity} kiosk_baseurl: {kiosk_baseurl}")
 
 locationgp = ('error', 'pdx', 'pgaw')[localnetcode] # user for group browser commands
 MQTT_HOST = "mqtt"
 HA_ID = ('error','HASS','HASSpga')[localnetcode]
+print(f"localnetcode: {localnetcode} locationgp: {locationgp} HA_ID: {HA_ID}")
 
 # MQTT topics
 TOPIC_TOUCH = f"wallpanel/{nodename}/touch"
+TOPIC_HAIP = f"wallpanel/{nodename}/haip"
 
 TOPIC_CONTROL = f"wallpanel/{nodename}/control"
 TOPIC_GP_CONTROL = f"wallpanel/{locationgp}/control"
@@ -120,12 +123,14 @@ def on_message(client, userdata, msg):
                 print(f"[on_message] Unknown MQTT command: {value}")
         elif topic == STATE_TOPIC:
             value = msg.payload.decode()
-            print(f"[on_message] Announce Topic: {topic}  {value}")
+            print(f"[on_message] State Topic: {topic}  {value}")
             # normalize to ip number so as not to confuse browser local storage
-            kiosk_baseurl = f"{HAIP}:8123{value.partition("8123")[2]}"
-        elif topic == "homeassistant/ip":
+            kiosk_baseurl = f"{value.partition("8123")[2]}"
+        elif topic == TOPIC_HAIP:
             HAIP = msg.payload.decode()
-            print(f"[homeassistant/ip] Home Assistant IP: {HAIP}")
+            print(f"[on_message] TOPIC_HAIP Home Assistant IP: {HAIP}")
+
+
 
 
 
@@ -141,7 +146,7 @@ def mqtt_thread():
     for topic in BRIGHTNESS_TOPICS:
         client.subscribe(topic)
     client.subscribe(STATE_TOPIC)
-    client.subscribe("homeassistant/ip")
+    client.subscribe(TOPIC_HAIP)
     print("Subscribed to all topics")
     client.on_message = on_message
     client.loop_forever()
@@ -162,8 +167,10 @@ def touch_thread():
             publish.single(TOPIC_TOUCH, str(v), hostname=MQTT_HOST)
             print(f"{v} Touch event sent")
 
-def initialize_browser_environment(profile_dir):
-    print("[initialize_browser_environment] Initializing")
+def initialize_browser_environment(profile_dir, kioskname):
+    global HAIP
+    initurl = f"{HAIP}/lovelace/0?BrowserID={kioskname}"
+    print(f"[initialize_browser_environment] Initializing {initurl}" )
     browser = subprocess.run([
         "/usr/lib/chromium/chromium",
         "--no-first-run",
@@ -172,7 +179,7 @@ def initialize_browser_environment(profile_dir):
         "--disable-infobars",
         "--password-store=basic",
         f"--user-data-dir={profile_dir}",
-        f"{HAIP}:8123/lovelace/0"])
+        initurl])
     print("Output:", browser.stdout)
     print("Errors:", browser.stderr)
     print("Exit Code:", browser.returncode)
@@ -188,14 +195,15 @@ def initialize_browser_environment(profile_dir):
                 pass
 
 
-def start_browser(url, nodename):
-    print(f"[start_browser] Starting in {url}")
-
+def start_browser(burl, kioskname):
+    global HAIP
+    url = f"{HAIP}{burl}"
     profile_dir = "/home/pi/.config/chromium-kioskscreen"
     profilepath = Path(profile_dir)
     if not profilepath.is_dir():
-        initialize_browser_environment(profile_dir)
+        initialize_browser_environment(profile_dir, kioskname)
 
+    print(f"[start_browser] Starting in {url}")
     browser = subprocess.Popen([
         "/usr/lib/chromium/chromium",
         "--kiosk",
@@ -205,7 +213,7 @@ def start_browser(url, nodename):
         "--disable-infobars",
         "--password-store=basic",
         "--user-data-dir=/home/pi/.config/chromium-kioskscreen",
-        url] )
+        f"{url}?BrowserID={kioskname}"] )
     print("Browser started")
     return browser
 
@@ -227,9 +235,16 @@ if __name__ == "__main__":
     pb.set_brightness(255)
     threading.Thread(target=mqtt_thread, daemon=True).start()
     print('started listener')
-    time.sleep(1)
-
+    publish.single(TOPIC_HAIP, HAIP, hostname=MQTT_HOST)
     msgwait = -1
+    while HAIP == "0.0.0.0":
+        if msgwait  <0:
+            print("Waiting HA IP")
+            msgwait = 30
+        else:
+            msgwait -= 1
+        time.sleep(1)
+
     if kiosk_baseurl is None: # haven't set up this kiosk in HA yet else retained MQTT message would have set this
         print('Initializing kiosk in HA')
         discovery_payload = {
@@ -245,17 +260,12 @@ if __name__ == "__main__":
         }
         publish.single(DISCOVERY_TOPIC, json.dumps(discovery_payload), hostname=MQTT_HOST, retain=True)
         # now wait for user to set topic in HA
-        kiosk_baseurl = "unset"
         publish.single(STATE_TOPIC, kiosk_baseurl, hostname=MQTT_HOST, retain=True)
+        #publish.single(COMMAND_TOPIC, kiosk_baseurl, hostname=MQTT_HOST, retain=True)
         time.sleep(1)
+    else:
+        print(f'HA baseurl already set as {kiosk_baseurl}')
 
-    while kiosk_baseurl == "unset":
-        if msgwait < 0:
-            print("Waiting for real baseurl to set")
-            msgwait = 30
-        else:
-            msgwait -= 1
-        time.sleep(1)
-    print(f"Kiosk dashboard passed to start browser: {kiosk_baseurl}")
-    browser = start_browser(kiosk_baseurl, nodename)
+    print(f"Kiosk dashboard passed to start browser: {kiosk_baseurl},{kioskname}")
+    browser = start_browser(kiosk_baseurl, kioskname)
     touch_thread()

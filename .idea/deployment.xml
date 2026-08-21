@@ -6,9 +6,7 @@
       <paths name="rpi-dev7x">
         <serverdata>
           <mappings>
-            <mapping deploy="bin/panel_events.py" local="$PROJECT_DIR$/panel_events.py" web="/" />
-            <mapping deploy="bin/panelbrightness.py" local="&#9;O:/PythonProjects/KioskHelper/parnelbrightness.py" web="/" />
-            <mapping deploy="kiosk" local="$PROJECT_DIR$" />
+            <mapping deploy="kiosk" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
