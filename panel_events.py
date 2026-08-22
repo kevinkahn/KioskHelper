@@ -119,6 +119,8 @@ def on_message(client, userdata, msg):
             elif value == 'restart':
                 print("[restart] Restart kiosk")
                 subprocess.run(["systemctl", "--user", "restart", "panel"])
+            elif value == 'update':
+                pass
             else:
                 print(f"[on_message] Unknown MQTT command: {value}")
         elif topic == STATE_TOPIC:
