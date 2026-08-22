@@ -120,6 +120,7 @@ def on_message(client, userdata, msg):
                 print("[restart] Restart kiosk")
                 subprocess.run(["systemctl", "--user", "restart", "panel"])
             elif value == 'update':
+                subprocess.run(["git", "pull"], cwd="/home/pi/kiosk")
                 pass
             else:
                 print(f"[on_message] Unknown MQTT command: {value}")
