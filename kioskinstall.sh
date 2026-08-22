@@ -7,7 +7,6 @@ mkdir -p ~/.config/systemd/user
 cd kiosk
 mv panel.service ~/.config/systemd/user
 chmod +x panel_events.py
-mv panel_events.py ~/bin
 python3 -m venv /home/pi/kiosk/venv
 source /home/pi/kiosk/venv/bin/activate
 pip install --upgrade pip
