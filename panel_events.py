@@ -105,12 +105,12 @@ def on_message(client, userdata, msg):
     try:
         topic = msg.topic
         print(f'[on_message] Topic: {topic}')
-        if topic == TOPIC_BRIGHTNESS:
+        if topic in BRIGHTNESS_TOPICS:
             value = int(msg.payload.decode())
             print(f"Bright req: {msg.payload.decode()}  {value}")
             value = max(0, min(255, value))
             pb.set_brightness(value)
-        elif topic == TOPIC_CONTROL:
+        elif topic in CONTROL_TOPICS:
             value = msg.payload.decode()
             print(f"[on_message] Control Topic: x{topic}x  x{value}x")
             if value == 'reboot':
@@ -208,6 +208,7 @@ def start_browser(burl, kioskname):
         "/usr/lib/chromium/chromium",
         "--kiosk",
         "--no-first-run",
+        "--hide-scrollbars",
         "--no-default-browser-check",
         "--noerrdialogs",
         "--disable-infobars",
