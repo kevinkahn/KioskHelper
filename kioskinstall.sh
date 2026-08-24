@@ -2,6 +2,7 @@
 #git clone https://github.com/kevinkahn/KioskHelper.git /home/pi/kiosk
 # info on cursor hiding https://www.google.com/search?q=hide+mouse+pointer+home+assistant+kiosk+mode+chromium+on+trixie&sca_esv=910d60152409f3a0&biw=2089&bih=1108&sxsrf=APpeQnuix5eEC9zdD9y2psKF25h9FSOcLQ%3A1786760709576&ei=Bc5_asPWIpun0PEPp7SumAc&ved=0ahUKEwiD7ZGryqGWAxWbEzQIHSeaC3MQ4dUDCBA&uact=5&oq=hide+mouse+pointer+home+assistant+kiosk+mode+chromium+on+trixie&gs_lp=Egxnd3Mtd2l6LXNlcnAiP2hpZGUgbW91c2UgcG9pbnRlciBob21lIGFzc2lzdGFudCBraW9zayBtb2RlIGNocm9taXVtIG9uIHRyaXhpZUj6bFDbLViCbHABeAGQAQCYAXigAecRqgEEMjEuNbgBA8gBAPgBAZgCGKAC4xDCAgoQABhHGNYEGLADwgIHECMYsAIYJ8ICCBAAGIAEGKIEwgIFEAAY7wXCAgoQIRgKGKABGMMEwgIEECEYCsICBRAhGKABwgIFECEYqwLCAgUQIRifBZgDAIgGAZAGCJIHBDE4LjagB-t7sgcEMTcuNrgH3xDCBwQ5LjE1yAchgAgB&sclient=gws-wiz-serp
 cd ~
+sudo usermod -a -G sudo pi
 mkdir -p ~/bin
 mkdir -p ~/.config/systemd/user
 cd kiosk
