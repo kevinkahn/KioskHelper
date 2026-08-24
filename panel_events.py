@@ -17,7 +17,8 @@ def handle_sigterm(signum, frame):
     """Callback function triggered when SIGTERM is received."""
     print(f"Received SIGTERM (signal {signum}). Cleaning up resources...")
     try:
-        browser.terminate()
+        if not browser is None:
+            browser.terminate()
         print("Terminated browser")
     except Exception as e:
         print(f"Failed to terminate browser: {e}")
@@ -25,21 +26,25 @@ def handle_sigterm(signum, frame):
 
 def get_local_ip_gp():
     # return the local net number for choosing local HA
-   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-   try:
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
      # Does not have to be reachable to extract the local interface IP
-        s.connect(('8.8.8.8', 1))
-        ip = s.getsockname()[0]
-   except Exception:
+       s.connect(('8.8.8.8', 1))
+       ip = s.getsockname()[0]
+    except Exception as e:
+        print(f"Failed to get local ip address: {e}")
         ip = '127.0.0.1'
-   finally:
+    finally:
         s.close()
-   return int(ip.split('.')[2])
+    return int(ip.split('.')[2])
 
 signal.signal(signal.SIGTERM, handle_sigterm)
 
-browser = None
+browser: subprocess.Popen | None = None
 localnetcode = get_local_ip_gp()
+screenbrightness = 100
+screenreturntodim = 15
+activebrightness = 100
 
 # Node name is pi dns name
 nodename = os.uname().nodename
@@ -109,7 +114,7 @@ def on_message(client, userdata, msg):
             value = int(msg.payload.decode())
             print(f"Bright req: {msg.payload.decode()}  {value}")
             value = max(0, min(255, value))
-            pb.set_brightness(value)
+            brightnessmgr.setdefaultlevel(value)
         elif topic in CONTROL_TOPICS:
             value = msg.payload.decode()
             print(f"[on_message] Control Topic: x{topic}x  x{value}x")
@@ -159,6 +164,7 @@ def mqtt_thread():
 # Touch Listener
 # ---------------------------
 def touch_thread():
+
     event_dev = find_touchscreen_event()
     dev = InputDevice(event_dev)
 
@@ -166,15 +172,13 @@ def touch_thread():
 
     for event in dev.read_loop():
         if event.type == ecodes.EV_KEY and event.value == 1:
-            v = pb.get_brightness()
-            publish.single(TOPIC_TOUCH, str(v), hostname=MQTT_HOST)
-            print(f"{v} Touch event sent")
+            brightnessmgr.touch_detected()
 
-def initialize_browser_environment(profile_dir, kioskname):
+def initialize_browser_environment(profile_dir, kiosknm):
     global HAIP
-    initurl = f"{HAIP}/lovelace/0?BrowserID={kioskname}"
+    initurl = f"{HAIP}/lovelace/0?BrowserID={kiosknm}"
     print(f"[initialize_browser_environment] Initializing {initurl}" )
-    browser = subprocess.run([
+    initbrowser = subprocess.run([
         "/usr/lib/chromium/chromium",
         "--no-first-run",
         "--no-default-browser-check",
@@ -183,9 +187,9 @@ def initialize_browser_environment(profile_dir, kioskname):
         "--password-store=basic",
         f"--user-data-dir={profile_dir}",
         initurl])
-    print("Output:", browser.stdout)
-    print("Errors:", browser.stderr)
-    print("Exit Code:", browser.returncode)
+    print("Output:", initbrowser.stdout)
+    print("Errors:", initbrowser.stderr)
+    print("Exit Code:", initbrowser.returncode)
     print("Finished first time run")
 
     # Remove lingering Chromium lock files before starting
@@ -198,13 +202,13 @@ def initialize_browser_environment(profile_dir, kioskname):
                 pass
 
 
-def start_browser(burl, kioskname):
-    global HAIP
+def start_browser(burl, kiosknm):
+    global HAIP, browser
     url = f"{HAIP}{burl}"
     profile_dir = "/home/pi/.config/chromium-kioskscreen"
     profilepath = Path(profile_dir)
     if not profilepath.is_dir():
-        initialize_browser_environment(profile_dir, kioskname)
+        initialize_browser_environment(profile_dir, kiosknm)
 
     print(f"[start_browser] Starting in {url}")
     browser = subprocess.Popen([
@@ -217,26 +221,16 @@ def start_browser(burl, kioskname):
         "--disable-infobars",
         "--password-store=basic",
         "--user-data-dir=/home/pi/.config/chromium-kioskscreen",
-        f"{url}?BrowserID={kioskname}"] )
+        f"{url}?BrowserID={kiosknm}"] )
     print("Browser started")
     return browser
-
-    '''
-    try:
-        result = subprocess.run(['bash', '/home/pi/bin/kiosk.sh'], capture_output=True, text=True)
-        print("Cleaned up")
-        print("STDOUT:", result.stdout)
-        print("STDERR:", result.stderr)
-    except Exception as e:
-        print(f"Cleaned up: {e}")
-    '''
-
 
 # ---------------------------
 # Start both threads
 # ---------------------------
 if __name__ == "__main__":
-    pb.set_brightness(255)
+    brightnessmgr = pb.BrightnessManager(15)
+    brightnessmgr.set_brightness(100)
     threading.Thread(target=mqtt_thread, daemon=True).start()
     print('started listener')
     publish.single(TOPIC_HAIP, HAIP, hostname=MQTT_HOST)
