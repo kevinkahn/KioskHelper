@@ -52,7 +52,7 @@ nodename = os.uname().nodename
 kioskname = f"kiosk_{nodename.replace('rpi-','')}"
 kioskbaseurlentity = f"{kioskname}_baseurl"
 kiosk_baseurl = None  # actual url once established running
-print(f"Kiosk Info: node: {nodename} kioskname: {kioskname} kioskbaseurlentity: {kioskbaseurlentity} kiosk_baseurl: {kiosk_baseurl}")
+#print(f"Kiosk Info: node: {nodename} kioskname: {kioskname} kioskbaseurlentity: {kioskbaseurlentity} kiosk_baseurl: {kiosk_baseurl}")
 
 locationgp = ('error', 'pdx', 'pgaw')[localnetcode] # user for group browser commands
 MQTT_HOST = "mqtt"
@@ -233,7 +233,7 @@ if __name__ == "__main__":
     brightnessmgr.set_brightness(100)
     threading.Thread(target=mqtt_thread, daemon=True).start()
     print('started listener')
-    publish.single(TOPIC_HAIP, HAIP, hostname=MQTT_HOST)
+    publish.single(f"{TOPIC_HAIP}-req", HAIP, hostname=MQTT_HOST)
     msgwait = -1
     while HAIP == "0.0.0.0":
         if msgwait  <0:
