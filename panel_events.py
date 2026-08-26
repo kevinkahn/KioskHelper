@@ -125,6 +125,9 @@ def on_message(client, userdata, msg):
                 print("[restart] Restart kiosk")
                 subprocess.run(["systemctl", "--user", "restart", "panel"])
             elif value == 'update':
+                print("[update] Update kiosk")
+                subprocess.run(["git", "fetch"], cwd="/home/pi/kiosk")
+                subprocess.run(["git", "reset", "--hard"], cwd="/home/pi/kiosk")
                 subprocess.run(["git", "pull"], cwd="/home/pi/kiosk")
                 subprocess.run(["systemctl","--user","restart","panel"])
             else:
@@ -161,6 +164,8 @@ def mqtt_thread():
     client.on_message = on_message
     client.loop_forever()
 
+def returntobaseurl():
+    publish.single(f"wallpanel/{nodename}/returntobase", HAIP, hostname=MQTT_HOST)
 
 # ---------------------------
 # Touch Listener
@@ -233,13 +238,15 @@ def start_browser(burl, kiosknm):
 if __name__ == "__main__":
     brightnessmgr = pb.BrightnessManager(15)
     brightnessmgr.set_brightness(100)
+    pb.returntobaseurl = returntobaseurl
     threading.Thread(target=mqtt_thread, daemon=True).start()
     print('started listener')
     publish.single(f"{TOPIC_HAIP}-req", HAIP, hostname=MQTT_HOST)
     msgwait = -1
     while HAIP == "0.0.0.0":
         if msgwait  <0:
-            print("Waiting HA IP")
+            print("Waiting HA IP - rerequesting")
+            publish.single(f"{TOPIC_HAIP}-req", HAIP, hostname=MQTT_HOST)
             msgwait = 30
         else:
             msgwait -= 1

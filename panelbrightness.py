@@ -1,6 +1,8 @@
 import os
 import threading
 
+returntobaseurl = None
+
 class BrightnessManager:
     def __init__(self, timeout=10):
         self.timer = None
@@ -61,6 +63,8 @@ class BrightnessManager:
     def restore_brightness(self):
         with self.lock:
             self.set_brightness(self.screenbrightness)
+            if returntobaseurl is not None:
+                returntobaseurl()
             self.timer = None
 
     def touch_detected(self):
