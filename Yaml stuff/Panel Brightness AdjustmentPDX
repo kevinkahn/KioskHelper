@@ -1,0 +1,39 @@
+alias: Panel Brightness AdjustmentPDX
+description: ""
+triggers:
+  - trigger: sun.dawn
+    options:
+      type: civil
+    id: Dawn
+  - trigger: time
+    at: "23:10:00"
+    id: Bedtime
+conditions: []
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id:
+              - Dawn
+        sequence:
+          - action: mqtt.publish
+            metadata: {}
+            data:
+              evaluate_payload: false
+              qos: "0"
+              retain: false
+              topic: wallpanel/pdx/brightness
+              payload: "100"
+      - conditions:
+          - condition: trigger
+            id:
+              - Bedtime
+        sequence:
+          - action: mqtt.publish
+            metadata: {}
+            data:
+              evaluate_payload: false
+              qos: "0"
+              topic: wallpanel/pdx/brightness
+              payload: "25"
+mode: single

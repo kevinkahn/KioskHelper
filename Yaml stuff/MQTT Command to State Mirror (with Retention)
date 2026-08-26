@@ -1,0 +1,15 @@
+alias: MQTT Command to State Mirror (with Retention)
+description: Echoes HA commands back to the state topic with the retain flag set to true.
+triggers:
+  - trigger: mqtt
+    options:
+      topic: HASS/text/+/set
+conditions: []
+actions:
+  - action: mqtt.publish
+    data:
+      topic: "{{ trigger.topic | replace('/set', '/state') }}"
+      payload: "{{ trigger.payload }}"
+      retain: true
+mode: parallel
+max: 10

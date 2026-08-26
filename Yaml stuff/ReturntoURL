@@ -1,0 +1,24 @@
+alias: ReturntoBaseURL
+description: ""
+triggers:
+  - trigger: mqtt
+    options:
+      topic: wallpanel/+/returntobase
+conditions: []
+actions:
+  - variables:
+      browsername: "{{ trigger.topic.split('/')[1] | replace('rpi-','') }}"
+      fullpath: "{{ states('text.rpi_' ~ browsername ~ '_baseurl') }}"
+      basepath: "{{ fullpath.partition('8123')[2] }}"
+  - action: persistent_notification.create
+    metadata: {}
+    data:
+      title: RTB {{ browsername }}
+      message: "{{ trigger.topic | replace(\"wallpanel/\",\"\") }} {{ basepath }} "
+    enabled: false
+  - action: browser_mod.navigate
+    data:
+      browser_id: kiosk_{{ browsername }}
+      path: "{{ basepath }}"
+mode: parallel
+max: 10

@@ -1,0 +1,45 @@
+alias: GenericReturntoKioskBase2
+description: ""
+triggers:
+  - trigger: event
+    event_type: state_changed
+conditions:
+  - condition: template
+    value_template: "{{ trigger.event.data.entity_id in label_entities('kioskpaths') }}"
+actions:
+  - variables:
+      browsername: >-
+        {{ trigger.event.data.entity_id| replace('_browser_path','') |
+        replace('sensor.','') | replace('kiosk_','')}}
+      current_path: "{{ states(trigger.event.data.entity_id) }}"
+      fullpath: "{{ states('text.rpi_' ~ browsername ~ '_baseurl') }}"
+      basepath: "{{ fullpath.partition('8123')[2] }}"
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >-
+              {{ is_state(trigger.event.data.entity_id,
+              "/dashboard-kioskdummyreturn") }}
+        sequence:
+          - action: browser_mod.navigate
+            data:
+              browser_id: kiosk_{{ browsername }}
+              path: "{{ basepath }}"
+          - action: persistent_notification.create
+            metadata: {}
+            data:
+              message: GenericReturn called for dummy page
+      - conditions:
+          - condition: template
+            value_template: "{{ current_path != base_path }}"
+        sequence:
+          - delay:
+              hours: 0
+              minutes: 0
+              seconds: 15
+              milliseconds: 0
+          - action: browser_mod.navigate
+            data:
+              browser_id: kiosk_{{ browsername }}
+              path: "{{ basepath }}"
+mode: parallel

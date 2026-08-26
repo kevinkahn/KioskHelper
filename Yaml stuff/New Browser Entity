@@ -1,0 +1,26 @@
+alias: "System: New Browser Entity"
+description: >-
+  Triggers when a new entity matching a specific pattern is added to the
+  registry.
+triggers:
+  - event_type: entity_registry_updated
+    event_data:
+      action: create
+    trigger: event
+conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger.event.data.entity_id is search('browser_pathx',
+      ignorecase=true) }}
+actions:
+  - action: notify.persistent_notification
+    data:
+      title: New Entity Registered
+      message: >-
+        A new matching entity was created:  ID: {{ trigger.event.data.entity_id
+        }}
+  - action: homeassistant.add_label_to_entity
+    data:
+      label_id: kioskpaths
+      entity_id: "{{ trigger.event.data.entity_id }}"
+mode: parallel

@@ -1,0 +1,29 @@
+alias: IP Responder
+description: ""
+triggers:
+  - trigger: mqtt
+    options:
+      topic: wallpanel/+/haip-req
+conditions: []
+actions:
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 2
+      milliseconds: 0
+    enabled: true
+  - action: persistent_notification.create
+    metadata: {}
+    data:
+      message: "{{ trigger.topic | replace(\"-req\",\"\") }}"
+    enabled: false
+  - action: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: "0"
+      retain: false
+      topic: "{{ trigger.topic | replace(\"-req\",\"\") }}"
+      payload: "{{ states('sensor.local_ip') }}:8123"
+mode: queued
+max: 10
