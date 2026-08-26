@@ -137,6 +137,8 @@ def on_message(client, userdata, msg):
         elif topic == TOPIC_HAIP:
             HAIP = msg.payload.decode()
             print(f"[on_message] TOPIC_HAIP Home Assistant IP: {HAIP}")
+        else:
+            print(f"[on_message] Unknown MQTT topic: {topic} with value: {msg.payload.decode()}")
 
 
 
