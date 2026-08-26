@@ -165,7 +165,7 @@ def mqtt_thread():
     client.loop_forever()
 
 def returntobaseurl():
-    publish.single(f"wallpanel/{nodename}/returntobase", HAIP, hostname=MQTT_HOST)
+    publish.single(f"wallpanel/{nodename}/returntobase", hostname=MQTT_HOST)
 
 # ---------------------------
 # Touch Listener
