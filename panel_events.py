@@ -128,7 +128,7 @@ def on_message(client, userdata, msg):
                 subprocess.run(["git", "pull"], cwd="/home/pi/kiosk")
                 subprocess.run(["systemctl","--user","restart","panel"])
             else:
-                print(f"[on_message] Unknown MQTT command: {value}")
+                print(f"[on_message] Unknown MQTT command: {topic}:  {value}")
         elif topic == STATE_TOPIC:
             value = msg.payload.decode()
             print(f"[on_message] State Topic: {topic}  {value}")
