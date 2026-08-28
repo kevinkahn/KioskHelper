@@ -234,6 +234,7 @@ def touch_thread():
                     #print(f"Swipe detected: {direction}: {dx}, {dy}, {dist}")
                     #print(f"Coords: {start_x} {end_x}, {start_y} {end_y}")
                     if direction in ("Down","Up"): sendbrowsercontrol("refresh")
+                    if direction in ("Right","Left"): sendbrowsercontrol("maintenance")
                     tap_count = 0
                 elif duration < TAP_MAX_TIME:
                     # Check for Taps
