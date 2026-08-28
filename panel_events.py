@@ -110,7 +110,7 @@ def on_message(client, userdata, msg):
     global kiosk_baseurl, HAIP
     try:
         topic = msg.topic
-        #print(f'[on_message] Topic: {topic}')
+        print(f'[on_message] Topic: {topic}')
         if topic in BRIGHTNESS_TOPICS:
             value = int(msg.payload.decode())
             print(f"Bright req: {msg.payload.decode()}  {value}")
@@ -153,7 +153,7 @@ def on_message(client, userdata, msg):
 
 
 def mqtt_thread():
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="localmqtt")
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.connect(MQTT_HOST)
     for topic in CONTROL_TOPICS:
         client.subscribe(topic)
