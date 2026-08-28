@@ -3,6 +3,7 @@ import json
 import subprocess
 import threading
 import panelbrightness as pb
+import re
 
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
@@ -263,8 +264,8 @@ def initialize_browser_environment(profile_dir, kiosknm):
         "--noerrdialogs",
         "--disable-infobars",
         "--password-store=basic",
-        f"--user-data-dir={profile_dir}",
-        initurl])
+        f"--user-data-dir={profile_dir}"] + extrachromeflags +
+        [initurl])
     print("Output:", initbrowser.stdout)
     print("Errors:", initbrowser.stderr)
     print("Exit Code:", initbrowser.returncode)
@@ -298,8 +299,8 @@ def start_browser(burl, kiosknm):
         "--noerrdialogs",
         "--disable-infobars",
         "--password-store=basic",
-        "--user-data-dir=/home/pi/.config/chromium-kioskscreen",
-        f"{url}?BrowserID={kiosknm}"] )
+        "--user-data-dir=/home/pi/.config/chromium-kioskscreen"] +
+        extrachromeflags + [f"{url}?BrowserID={kiosknm}"] )
     print("Browser started")
     return browser
 
@@ -307,6 +308,26 @@ def start_browser(burl, kiosknm):
 # Start both threads
 # ---------------------------
 if __name__ == "__main__":
+    try:
+        # Read the raw model name from the system's devicetree
+        with open('/proc/device-tree/model', 'r') as f:
+            raw_model = f.read().strip('\x00\n ')  # Strip null bytes and newlines
+
+        # 1. Remove the "Raspberry Pi" text prefix
+        model = raw_model.replace("Raspberry Pi", "").strip()
+
+        # 2. Strip trailing hardware revisions (e.g., "Rev 1.2")
+        model = re.sub(r'\s+Rev\s+\d+\.\d+', '', model, flags=re.IGNORECASE)
+    except FileNotFoundError:
+        model = 4
+        print(f"Error getting model {raw_model}")
+    print(f"Raspberry Pi model: {model}")
+    if model == "3 Model B Plus":
+        extrachromeflags = ["--disable-gpu", "--disable-software-rasterizer"]
+        print(f"Suppress gpu: {extrachromeflags}")
+    else:
+        extrachromeflags = []
+
     brightnessmgr = pb.BrightnessManager(15)
     brightnessmgr.set_brightness(100)
     pb.issuebrowsercontrol = sendbrowsercontrol
