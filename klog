@@ -1,0 +1,2 @@
+#! /usr/bin/bash
+journalctl -f --user-unit panel

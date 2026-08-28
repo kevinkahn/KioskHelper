@@ -6,7 +6,7 @@ import panelbrightness as pb
 
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
-from evdev import InputDevice, ecodes
+from evdev import InputDevice, ecodes, categorize
 import socket
 import os, glob, time, sys
 import signal
@@ -167,6 +167,10 @@ def mqtt_thread():
 def returntobaseurl():
     publish.single(f"wallpanel/{nodename}/returntobase", hostname=MQTT_HOST)
 
+def sendbrowsercontrol(command):
+    publish.single(f"wallpanel/{nodename}/browserctl", payload=command, hostname=MQTT_HOST)
+    print(f"sendbrowsercontrol command: {command}")
+
 # ---------------------------
 # Touch Listener
 # ---------------------------
@@ -175,11 +179,78 @@ def touch_thread():
     event_dev = find_touchscreen_event()
     dev = InputDevice(event_dev)
 
-    print("[touch] Listener started")
+    print(f"Listening for events on {dev.name}...")
+
+    start_x, start_y = 0, 0
+    start_time = 0
+    touch_down = False
+    tap_count = 0
+    last_tap_time = 0
+
+    # Thresholds
+    SWIPE_DIST = 100  # pixels
+    TAP_MAX_TIME = 0.3  # seconds for a tap
+    DOUBLE_TAP_WINDOW = 0.4  # seconds between taps
 
     for event in dev.read_loop():
-        if event.type == ecodes.EV_KEY and event.value == 1:
-            brightnessmgr.touch_detected()
+        if event.type == ecodes.EV_ABS:
+            absevent = categorize(event)
+            #print(f"absevent: {absevent}")
+            #if absevent.event.code == ecodes.ABS_X:
+            if absevent.event.code in (ecodes.ABS_X, ecodes.ABS_MT_POSITION_X):
+                current_x = absevent.event.value
+            #elif absevent.event.code == ecodes.ABS_Y:
+            elif absevent.event.code in (ecodes.ABS_Y, ecodes.ABS_MT_POSITION_Y):
+                current_y = absevent.event.value
+
+        elif event.type == ecodes.EV_KEY and event.code == ecodes.BTN_TOUCH:
+            if event.value == 1:  # Touch down
+                touch_down = True
+                start_x = current_x if 'current_x' in locals() else 0
+                start_y = current_y if 'current_y' in locals() else 0
+                start_time = time.time()
+                print(f"Touch down: {start_x}, {start_y}")
+            elif event.value == 0:  # Touch up
+                touch_down = False
+                end_time = time.time()
+                duration = end_time - start_time
+                end_x = current_x if 'current_x' in locals() else start_x
+                end_y = current_y if 'current_y' in locals() else start_y
+                print(f"Touch up: {end_x}, {end_y} {'current_x' in locals()} {'current_y' in locals()}")
+
+                dx = end_x - start_x
+                dy = end_y - start_y
+                dist = (dx ** 2 + dy ** 2) ** 0.5
+
+                # Check for Swipe
+                if dist > SWIPE_DIST:
+                    if abs(dx) > abs(dy):
+                        direction = "Right" if dx > 0 else "Left"
+                    else:
+                        direction = "Down" if dy > 0 else "Up"
+                    print(f"Swipe detected: {direction}: {dx}, {dy}, {dist}")
+                    print(f"Coords: {start_x} {end_x}, {start_y} {end_y}")
+                    if direction == "Down": sendbrowsercontrol("refresh")
+                    tap_count = 0
+                elif duration < TAP_MAX_TIME:
+                    # Check for Taps
+                    now = time.time()
+                    if now - last_tap_time < DOUBLE_TAP_WINDOW:
+                        tap_count += 1
+                    else:
+                        tap_count = 1
+                    last_tap_time = now
+
+                    if tap_count == 2:
+                        print("Double tap detected!")
+                        tap_count = 0
+                    elif tap_count == 1:
+                        print("Single tap detected...")
+                        brightnessmgr.touch_detected()
+
+    #for event in dev.read_loop():
+    #    if event.type == ecodes.EV_KEY and event.value == 1:
+     #       brightnessmgr.touch_detected()
 
 def initialize_browser_environment(profile_dir, kiosknm):
     global HAIP
@@ -238,7 +309,7 @@ def start_browser(burl, kiosknm):
 if __name__ == "__main__":
     brightnessmgr = pb.BrightnessManager(15)
     brightnessmgr.set_brightness(100)
-    pb.returntobaseurl = returntobaseurl
+    pb.issuebrowsercontrol = sendbrowsercontrol
     threading.Thread(target=mqtt_thread, daemon=True).start()
     print('started listener')
     publish.single(f"{TOPIC_HAIP}-req", HAIP, hostname=MQTT_HOST)
