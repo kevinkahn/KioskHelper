@@ -57,7 +57,7 @@ kiosk_baseurl = None  # actual url once established running
 locationgp = ('error', 'pdx', 'pgaw')[localnetcode] # user for group browser commands
 MQTT_HOST = "mqtt"
 HA_ID = ('error','HASS','HASSpga')[localnetcode]
-print(f"localnetcode: {localnetcode} locationgp: {locationgp} HA_ID: {HA_ID}")
+print(f"Using local network: {localnetcode} Local group: {locationgp} HA Name: {HA_ID}")
 
 # MQTT topics
 TOPIC_TOUCH = f"wallpanel/{nodename}/touch"
@@ -109,7 +109,7 @@ def on_message(client, userdata, msg):
     global kiosk_baseurl, HAIP
     try:
         topic = msg.topic
-        print(f'[on_message] Topic: {topic}')
+        #print(f'[on_message] Topic: {topic}')
         if topic in BRIGHTNESS_TOPICS:
             value = int(msg.payload.decode())
             print(f"Bright req: {msg.payload.decode()}  {value}")
@@ -169,7 +169,7 @@ def returntobaseurl():
 
 def sendbrowsercontrol(command):
     publish.single(f"wallpanel/{nodename}/browserctl", payload=command, hostname=MQTT_HOST)
-    print(f"sendbrowsercontrol command: {command}")
+    #print(f"sendbrowsercontrol command: {command}")
 
 # ---------------------------
 # Touch Listener
@@ -209,14 +209,14 @@ def touch_thread():
                 start_x = current_x if 'current_x' in locals() else 0
                 start_y = current_y if 'current_y' in locals() else 0
                 start_time = time.time()
-                print(f"Touch down: {start_x}, {start_y}")
+                #print(f"Touch down: {start_x}, {start_y}")
             elif event.value == 0:  # Touch up
                 touch_down = False
                 end_time = time.time()
                 duration = end_time - start_time
                 end_x = current_x if 'current_x' in locals() else start_x
                 end_y = current_y if 'current_y' in locals() else start_y
-                print(f"Touch up: {end_x}, {end_y} {'current_x' in locals()} {'current_y' in locals()}")
+                #print(f"Touch up: {end_x}, {end_y} {'current_x' in locals()} {'current_y' in locals()}")
 
                 dx = end_x - start_x
                 dy = end_y - start_y
@@ -228,8 +228,8 @@ def touch_thread():
                         direction = "Right" if dx > 0 else "Left"
                     else:
                         direction = "Down" if dy > 0 else "Up"
-                    print(f"Swipe detected: {direction}: {dx}, {dy}, {dist}")
-                    print(f"Coords: {start_x} {end_x}, {start_y} {end_y}")
+                    #print(f"Swipe detected: {direction}: {dx}, {dy}, {dist}")
+                    #print(f"Coords: {start_x} {end_x}, {start_y} {end_y}")
                     if direction == "Down": sendbrowsercontrol("refresh")
                     tap_count = 0
                 elif duration < TAP_MAX_TIME:
@@ -245,7 +245,7 @@ def touch_thread():
                         print("Double tap detected!")
                         tap_count = 0
                     elif tap_count == 1:
-                        print("Single tap detected...")
+                        #print("Single tap detected...")
                         brightnessmgr.touch_detected()
 
     #for event in dev.read_loop():
@@ -311,7 +311,7 @@ if __name__ == "__main__":
     brightnessmgr.set_brightness(100)
     pb.issuebrowsercontrol = sendbrowsercontrol
     threading.Thread(target=mqtt_thread, daemon=True).start()
-    print('started listener')
+    print('Started MQTT handler')
     publish.single(f"{TOPIC_HAIP}-req", HAIP, hostname=MQTT_HOST)
     msgwait = -1
     while HAIP == "0.0.0.0":
