@@ -153,7 +153,7 @@ def on_message(client, userdata, msg):
 
 
 def mqtt_thread():
-    client = mqtt.Client()
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="localmqtt")
     client.connect(MQTT_HOST)
     for topic in CONTROL_TOPICS:
         client.subscribe(topic)
