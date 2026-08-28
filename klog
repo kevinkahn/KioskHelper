@@ -1,2 +1,2 @@
 #! /usr/bin/bash
-journalctl -f --user-unit panel
+journalctl -n 30 -f --user-unit panel
