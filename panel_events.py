@@ -62,7 +62,7 @@ print(f"Using local network: {localnetcode} Local group: {locationgp} HA Name: {
 
 # MQTT topics
 TOPIC_TOUCH = f"wallpanel/{nodename}/touch"
-TOPIC_HAIP = f"wallpanel/{nodename}/haip"
+TOPIC_HAIP = f"wallpanel/{nodename}/haip-{locationgp}"
 
 TOPIC_CONTROL = f"wallpanel/{nodename}/control"
 TOPIC_GP_CONTROL = f"wallpanel/{locationgp}/control"
@@ -342,7 +342,7 @@ if __name__ == "__main__":
     while HAIP == "0.0.0.0":
         if msgwait  <0:
             print("Waiting HA IP - rerequesting")
-            publish.single(f"{TOPIC_HAIP}-req", HAIP, hostname=MQTT_HOST)
+            publish.single(f"{TOPIC_HAIP}-req-{locationgp}", HAIP, hostname=MQTT_HOST)
             msgwait = 30
         else:
             msgwait -= 1
