@@ -337,7 +337,7 @@ if __name__ == "__main__":
     pb.issuebrowsercontrol = sendbrowsercontrol
     threading.Thread(target=mqtt_thread, daemon=True).start()
     print('Started MQTT handler')
-    publish.single(f"{TOPIC_HAIP}-req", HAIP, hostname=MQTT_HOST)
+    publish.single(f"{TOPIC_HAIP}-req-{locationgp}", HAIP, hostname=MQTT_HOST)
     msgwait = -1
     while HAIP == "0.0.0.0":
         if msgwait  <0:
