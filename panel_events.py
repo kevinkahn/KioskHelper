@@ -179,6 +179,8 @@ def touch_thread():
 
     event_dev = find_touchscreen_event()
     dev = InputDevice(event_dev)
+    current_x = 0
+    current_y = 0
 
     print(f"Listening for events on {dev.name}...")
 
@@ -231,7 +233,7 @@ def touch_thread():
                         direction = "Down" if dy > 0 else "Up"
                     #print(f"Swipe detected: {direction}: {dx}, {dy}, {dist}")
                     #print(f"Coords: {start_x} {end_x}, {start_y} {end_y}")
-                    if direction == "Down": sendbrowsercontrol("refresh")
+                    if direction in ("Down","Up"): sendbrowsercontrol("refresh")
                     tap_count = 0
                 elif duration < TAP_MAX_TIME:
                     # Check for Taps
