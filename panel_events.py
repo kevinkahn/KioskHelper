@@ -308,6 +308,7 @@ def start_browser(burl, kiosknm):
 # Start both threads
 # ---------------------------
 if __name__ == "__main__":
+    print("====================================================")
     try:
         # Read the raw model name from the system's devicetree
         with open('/proc/device-tree/model', 'r') as f:
