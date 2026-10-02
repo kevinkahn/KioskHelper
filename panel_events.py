@@ -54,7 +54,7 @@ nodename = os.uname().nodename
 kioskname = f"kiosk_{nodename.replace('rpi-','')}"
 kioskbaseurlentity = f"{kioskname}_baseurl"
 kiosk_baseurl = None  # actual url once established running
-#log.item(f"Kiosk Info: node: {nodename} kioskname: {kioskname} kioskbaseurlentity: {kioskbaseurlentity} kiosk_baseurl: {kiosk_baseurl}")
+log.item(f"Kiosk Info: node: {nodename} kioskname: {kioskname} kioskbaseurlentity: {kioskbaseurlentity} kiosk_baseurl: {kiosk_baseurl}", level=3)
 
 locationgp = ('error', 'pdx', 'pgaw')[localnetcode] # user for group browser commands
 MQTT_HOST = "mqtt"
@@ -95,7 +95,7 @@ def find_touchscreen_event():
             if any(keyword in name for keyword in [
                 "touch", "ft", "goodix", "hid", "panel", "display"
             ]):
-                log.item(f"[touch] Using {dev} ({name})")
+                log.item(f"[touch] Using {dev} ({name})",level=2)
                 return dev
 
         except Exception:
@@ -176,7 +176,7 @@ def returntobaseurl():
 
 def sendbrowsercontrol(command):
     publish.single(f"wallpanel/{nodename}/browserctl", payload=command, hostname=MQTT_HOST)
-    #log.item(f"sendbrowsercontrol command: {command}")
+    log.item(f"sendbrowsercontrol command: {command}",level=2)
 
 # ---------------------------
 # Touch Listener
@@ -188,7 +188,7 @@ def touch_thread():
     current_x = 0
     current_y = 0
 
-    log.item(f"Listening for events on {dev.name}...")
+    log.item(f"Listening for events on {dev.name}")
 
     start_x, start_y = 0, 0
     start_time = 0
@@ -204,11 +204,9 @@ def touch_thread():
     for event in dev.read_loop():
         if event.type == ecodes.EV_ABS:
             absevent = categorize(event)
-            #log.item(f"absevent: {absevent}")
-            #if absevent.event.code == ecodes.ABS_X:
+            log.item(f"absevent: {absevent}", level=3)
             if absevent.event.code in (ecodes.ABS_X, ecodes.ABS_MT_POSITION_X):
                 current_x = absevent.event.value
-            #elif absevent.event.code == ecodes.ABS_Y:
             elif absevent.event.code in (ecodes.ABS_Y, ecodes.ABS_MT_POSITION_Y):
                 current_y = absevent.event.value
 
@@ -218,14 +216,14 @@ def touch_thread():
                 start_x = current_x if 'current_x' in locals() else 0
                 start_y = current_y if 'current_y' in locals() else 0
                 start_time = time.time()
-                #log.item(f"Touch down: {start_x}, {start_y}")
+                log.item(f"Touch down: {start_x}, {start_y}", level=3)
             elif event.value == 0:  # Touch up
                 touch_down = False
                 end_time = time.time()
                 duration = end_time - start_time
                 end_x = current_x if 'current_x' in locals() else start_x
                 end_y = current_y if 'current_y' in locals() else start_y
-                #log.item(f"Touch up: {end_x}, {end_y} {'current_x' in locals()} {'current_y' in locals()}")
+                log.item(f"Touch up: {end_x}, {end_y} {'current_x' in locals()} {'current_y' in locals()}", level=3)
 
                 dx = end_x - start_x
                 dy = end_y - start_y
