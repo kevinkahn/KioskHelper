@@ -37,7 +37,7 @@ class BrightnessManager:
                 try:
                     with open(brightness_file, "r") as f:
                         v = f.read()
-                    log.item(f"Got [v] ")
+                    log.item(f"Got {v} ", level=3)
                     return v
                 except Exception as e:
                     log.item(f"[brightness] Failed reading from {brightness_file}: {e}")
@@ -75,6 +75,8 @@ class BrightnessManager:
             if self.get_brightness() == self.activebrightness:
                 log.item(f"Already bright on touch ({self.activebrightness})")
                 return
+            else:
+                log.item(f"Do brighten from {self.get_brightness()} to {self.activebrightness}")
             # First touch in sequence
             if not self.touchesactive:
                 self.touchesactive = True
