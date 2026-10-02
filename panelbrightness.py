@@ -1,5 +1,6 @@
 import os
 import threading
+import logging as log
 
 issuebrowsercontrol: None
 
@@ -36,10 +37,10 @@ class BrightnessManager:
                 try:
                     with open(brightness_file, "r") as f:
                         v = f.read()
-                    print(f"Got [v] ")
+                    log.item(f"Got [v] ")
                     return v
                 except Exception as e:
-                    print(f"[brightness] Failed reading from {brightness_file}: {e}")
+                    log.item(f"[brightness] Failed reading from {brightness_file}: {e}")
         return 100
 
     @staticmethod
@@ -56,21 +57,24 @@ class BrightnessManager:
                 try:
                     with open(brightness_file, "w") as f:
                         f.write(str(value))
-                    print(f"[brightness] Set {dev} to {value}")
+                    log.item(f"[brightness] Set {dev} to {value}")
                 except Exception as e:
-                    print(f"[brightness] Failed writing to {brightness_file}: {e}")
+                    log.item(f"[brightness] Failed writing to {brightness_file}: {e}")
 
     def restore_brightness(self):
         with self.lock:
+            log.item(f"[brightness] Restore to {self.screenbrightness}")
             self.set_brightness(self.screenbrightness)
             if issuebrowsercontrol is not None:
                 issuebrowsercontrol('gotourl')
             self.timer = None
+            self.touchesactive = False
 
     def touch_detected(self):
         with self.lock:
             # First touch in sequence
             if not self.touchesactive:
+                self.touchesactive = True
                 self.set_brightness(self.activebrightness)  # temporary brightness
 
             # Reset timer
