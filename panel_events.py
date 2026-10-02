@@ -118,20 +118,24 @@ def on_message(client, userdata, msg):
             value = max(0, min(255, value))
             brightnessmgr.setdefaultlevel(value)
         elif topic in CONTROL_TOPICS:
-            value = msg.payload.decode()
-            log.item(f"[on_message] Control Topic: x{topic}x  x{value}x")
-            if value == 'reboot':
+            rawvalue = msg.payload.decode()
+            value = [item.strip() for item in rawvalue.strip().split(',')]
+            log.item(f"[on_message] Control Topic: {topic}  {value}")
+            if value[0] == 'reboot':
                 log.item("[reboot] Reboot node")
                 subprocess.run(["sudo", "reboot"])
-            elif value == 'restart':
+            elif value[0] == 'restart':
                 log.item("[restart] Restart kiosk")
                 subprocess.run(["systemctl", "--user", "restart", "panel"])
-            elif value == 'update':
+            elif value[0] == 'update':
                 log.item("[update] Update kiosk")
                 subprocess.run(["git", "fetch"], cwd="/home/pi/kiosk")
                 subprocess.run(["git", "reset", "--hard"], cwd="/home/pi/kiosk")
                 subprocess.run(["git", "pull"], cwd="/home/pi/kiosk")
                 subprocess.run(["systemctl","--user","restart","panel"])
+            elif value[0] == 'loglevel':
+                log.LogLevel = int(value[1])
+                log.item(f"[loglevel] Set loglevel to {value[1]}")
             else:
                 log.item(f"[on_message] Unknown MQTT command: {topic}:  {value}")
         elif topic == STATE_TOPIC:
