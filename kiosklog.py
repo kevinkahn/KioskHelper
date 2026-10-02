@@ -4,12 +4,15 @@ from pathlib import Path
 
 LOG_FILE = Path("/home/pi/log.txt")
 MAX_LOGS = 5
+LogLevel = 3
 
 
-def item(msg):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    with open(LOG_FILE, "a", encoding="utf-8") as f:
-        f.write(f"[{timestamp}] {msg}\n")
+
+def item(msg, level = 1):
+    if level <= LogLevel:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(f"[{timestamp}] {msg}\n")
 
 def rotate_logs():
     global LOG_FILE

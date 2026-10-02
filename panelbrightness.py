@@ -63,7 +63,7 @@ class BrightnessManager:
 
     def restore_brightness(self):
         with self.lock:
-            log.item(f"[brightness] Restore to {self.screenbrightness}")
+            log.item(f"Restore to {self.screenbrightness}")
             self.set_brightness(self.screenbrightness)
             if issuebrowsercontrol is not None:
                 issuebrowsercontrol('gotourl')
@@ -72,13 +72,18 @@ class BrightnessManager:
 
     def touch_detected(self):
         with self.lock:
+            if self.get_brightness() == self.activebrightness:
+                log.item(f"Already bright on touch ({self.activebrightness})")
+                return
             # First touch in sequence
             if not self.touchesactive:
                 self.touchesactive = True
+                log.item(f"Touch while dim, set to  ({self.activebrightness})")
                 self.set_brightness(self.activebrightness)  # temporary brightness
 
             # Reset timer
             if self.timer is not None:
+                log.item(f"Reset timer for touch while active")
                 self.timer.cancel()
 
             self.timer = threading.Timer(self.screenreturntodim, self.restore_brightness)
