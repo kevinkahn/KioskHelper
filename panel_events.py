@@ -3,7 +3,7 @@ import json
 import subprocess
 import threading
 import panelbrightness as pb
-import logging as log
+import kiosklog as log
 import re
 
 import paho.mqtt.client as mqtt

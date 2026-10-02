@@ -1,6 +1,6 @@
 import os
 import threading
-import logging as log
+import kiosklog as log
 
 issuebrowsercontrol: None
 
