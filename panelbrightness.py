@@ -38,7 +38,7 @@ class BrightnessManager:
                     with open(brightness_file, "r") as f:
                         v = f.read()
                     log.item(f"Got {v} ", level=3)
-                    return v
+                    return int(v)
                 except Exception as e:
                     log.item(f"[brightness] Failed reading from {brightness_file}: {e}")
         return 100
