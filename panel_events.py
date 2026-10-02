@@ -8,7 +8,7 @@ import re
 
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
-from evdev import InputDevice, ecodes, categorize
+from evdev import InputDevice, ecodes, categorize, UInput
 import socket
 import os, glob, time, sys
 import signal
@@ -181,10 +181,19 @@ def sendbrowsercontrol(command):
 # ---------------------------
 # Touch Listener
 # ---------------------------
-def touch_thread():
-    log.item("Start Touch Thread")
+def GrabTouchScreen():
+    log.item("Grabbing Touchscreen")
     event_dev = find_touchscreen_event()
     dev = InputDevice(event_dev)
+    dev.grab()
+    ui = UInput.from_device(dev, name="Filtered Touchscreen")
+    return dev, ui
+
+def touch_thread(dev, ui):
+    log.item(f"Start Touch Thread {dev.name}, {ui.name}")
+    swallow_gesture = False
+    touch_active = False
+
     current_x = 0
     current_y = 0
 
@@ -213,11 +222,23 @@ def touch_thread():
         elif event.type == ecodes.EV_KEY and event.code == ecodes.BTN_TOUCH:
             if event.value == 1:  # Touch down
                 touch_down = True
+                touch_active = True
+                if brightnessmgr.screenisdim:
+                    brightnessmgr.wake_screen()
+                    swallow_gesture = True
+                    log.item("Swallow this gesture")
+
                 start_x = current_x if 'current_x' in locals() else 0
                 start_y = current_y if 'current_y' in locals() else 0
                 start_time = time.time()
                 log.item(f"Touch down: {start_x}, {start_y}", level=3)
             elif event.value == 0:  # Touch up
+                touch_active = False
+                if swallow_gesture:
+                    swallow_gesture = False
+                    log.item("End swallow gesture")
+
+
                 touch_down = False
                 end_time = time.time()
                 duration = end_time - start_time
@@ -255,11 +276,12 @@ def touch_thread():
                         tap_count = 0
                     elif tap_count == 1:
                         log.item("Single tap detected")
-                        brightnessmgr.touch_detected()
+        if not swallow_gesture:
+            log.item(f"Reflect event {event}")
+            ui.write_event(event)
+            if event.type == ecodes.EV_SYN:
+                ui.syn()
 
-    #for event in dev.read_loop():
-    #    if event.type == ecodes.EV_KEY and event.value == 1:
-     #       brightnessmgr.touch_detected()
 
 def initialize_browser_environment(profile_dir, kiosknm):
     global HAIP
@@ -337,9 +359,8 @@ if __name__ == "__main__":
         log.item(f"Suppress gpu: {extrachromeflags}")
     else:
         extrachromeflags = []
-
+    dev, ui = GrabTouchScreen()
     brightnessmgr = pb.BrightnessManager(15)
-    brightnessmgr.set_brightness(100)
     pb.issuebrowsercontrol = sendbrowsercontrol
     threading.Thread(target=mqtt_thread, daemon=True).start()
     log.item('Started MQTT handler')
@@ -377,4 +398,4 @@ if __name__ == "__main__":
 
     log.item(f"Kiosk dashboard passed to start browser: {kiosk_baseurl},{kioskname}")
     browser = start_browser(kiosk_baseurl, kioskname)
-    touch_thread()
+    touch_thread(dev, ui)

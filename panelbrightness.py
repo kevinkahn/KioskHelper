@@ -9,19 +9,22 @@ class BrightnessManager:
         self.timer = None
         self.lock = threading.Lock()
         self.touchesactive = False
-        self.screenbrightness = 100
-        self.activebrightness = 100
+        self.idlescreenlevel = 100
+        self.activescreenlevel = 100
         self.screenreturntodim = timeout
+        self.set_brightness(self.idlescreenlevel)
+        self.screenisdim = True
 
     def setdefaultlevel(self, value):
-        self.screenbrightness = value
-        self.set_brightness(self.screenbrightness)
+        self.idlescreenlevel = value
+        self.set_brightness(self.idlescreenlevel)
+        self.screenisdim = True
 
     def settimeout(self, value):
         self.screenreturntodim = value
 
     def setactivebrightness(self, value):
-        self.activebrightness = value
+        self.activescreenlevel = value
 
     @staticmethod
     def get_brightness():
@@ -63,25 +66,27 @@ class BrightnessManager:
 
     def restore_brightness(self):
         with self.lock:
-            log.item(f"Restore to {self.screenbrightness}")
-            self.set_brightness(self.screenbrightness)
+            log.item(f"Restore to {self.idlescreenlevel}")
+            self.set_brightness(self.idlescreenlevel)
+            self.screenisdim = True
             if issuebrowsercontrol is not None:
                 issuebrowsercontrol('gotourl')
             self.timer = None
             self.touchesactive = False
 
-    def touch_detected(self):
+    def wake_screen(self):
         with self.lock:
-            if self.get_brightness() == self.activebrightness:
-                log.item(f"Already bright on touch ({self.activebrightness})")
+            if self.get_brightness() == self.activescreenlevel:
+                log.item(f"Already bright on touch ({self.activescreenlevel})")
                 return
             else:
-                log.item(f"Do brighten from {self.get_brightness()} to {self.activebrightness}")
+                log.item(f"Do brighten from {self.get_brightness()} to {self.activescreenlevel}")
             # First touch in sequence
             if not self.touchesactive:
                 self.touchesactive = True
-                log.item(f"Touch while dim, set to  ({self.activebrightness})")
-                self.set_brightness(self.activebrightness)  # temporary brightness
+                log.item(f"Touch while dim, set to  ({self.activescreenlevel})")
+                self.set_brightness(self.activescreenlevel)  # temporary brightness
+                self.screenisdim = False
 
             # Reset timer
             if self.timer is not None:
