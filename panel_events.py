@@ -132,6 +132,7 @@ def on_message(client, userdata, msg):
                 subprocess.run(["git", "fetch"], cwd="/home/pi/kiosk")
                 subprocess.run(["git", "reset", "--hard"], cwd="/home/pi/kiosk")
                 subprocess.run(["git", "pull"], cwd="/home/pi/kiosk")
+                log.item("[restart] Restart kiosk")
                 subprocess.run(["systemctl","--user","restart","panel"])
             elif value[0] == 'loglevel':
                 log.LogLevel = int(value[1])
@@ -318,7 +319,7 @@ def start_browser(burl, kiosknm):
 # ---------------------------
 if __name__ == "__main__":
     log.rotate_logs()
-    log.item("Kiosk starting")
+    log.item(f"Kiosk starting with loglevel {log.LogLevel}")
     try:
         # Read the raw model name from the system's devicetree
         with open('/proc/device-tree/model', 'r') as f:
