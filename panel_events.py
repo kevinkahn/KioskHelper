@@ -13,6 +13,7 @@ import socket
 import os, glob, time, sys
 import signal
 from pathlib import Path
+from datetime import datetime, timedelta
 
 
 def handle_sigterm(signum, frame):
@@ -48,6 +49,7 @@ screenbrightness = 100
 screenreturntodim = 15
 activebrightness = 100
 resetcorner = ((0,0),(0,0))
+browserretarttimes = ["03:14","11:15","17:30"]
 
 # Node name is pi dns name
 nodename = os.uname().nodename
@@ -284,7 +286,9 @@ def touch_thread(dev, ui):
                         log.item(f"Double tap detected at {current_x}, {current_y}", level=1)
                         if resetcorner[0][0] <= current_x <= resetcorner[0][1] and resetcorner[1][0] <= current_y <= resetcorner[1][1]:
                             log.item("Got a screen restart")
+                            log.item("Kill existing browser")
                             browser.kill()
+                            time.sleep(1)
                             browser = start_browser(kiosk_baseurl, kioskname)
                         tap_count = 0
                     elif tap_count == 1:
@@ -356,8 +360,39 @@ def start_browser(burl, kiosknm):
     log.item("Browser started")
     return browser
 
+def get_seconds_until_next(target_times):
+    """Calculates exactly how many seconds to sleep until the next event."""
+    now = datetime.now()
+    seconds_distances = []
+
+    for time_str in target_times:
+        target_hour, target_minute = map(int, time_str.split(":"))
+        target_dt = now.replace(
+            hour=target_hour, minute=target_minute, second=0, microsecond=0
+        )
+
+        # If the time has already passed today, schedule it for tomorrow
+        if target_dt <= now:
+            target_dt += timedelta(days=1)
+
+        seconds_distances.append((target_dt - now).total_seconds())
+
+    return min(seconds_distances)
+
+def periodic_browser_restart(timelist):
+    global browser
+    while True:
+        sleep_duration = get_seconds_until_next(timelist)
+        log.item(f"Sleeping efficiently for {sleep_duration} seconds...")
+        time.sleep(sleep_duration)
+        log.item(f"Periodic browser restart at {datetime.now().strftime('%H:%M:%S')}")
+        browser.kill()
+        time.sleep(1)
+        browser = start_browser(kiosk_baseurl, kioskname)
+
+
 # ---------------------------
-# Start both threads
+# Start 3 threads
 # ---------------------------
 if __name__ == "__main__":
     log.rotate_logs()
@@ -396,6 +431,9 @@ if __name__ == "__main__":
         else:
             msgwait -= 1
         time.sleep(1)
+
+    threading.Thread(target=periodic_browser_restart, args=(browser,)).start()
+
 
     if kiosk_baseurl is None: # haven't set up this kiosk in HA yet else retained MQTT message would have set this
         log.item('Initializing kiosk in HA')
