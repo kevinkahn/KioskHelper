@@ -191,11 +191,11 @@ def GrabTouchScreen():
     if os.path.exists("/home/pi/fliptouch"):
         log.item("Flip Touchscreen")
         ui = UInput.from_device(dev, name="Filtered Touchscreen Flipped")
-        resetcorner = ((0,25),(455,480))
+        resetcorner = ((0,60),(420,480))
     else:
         log.item("Normal Touchscreen")
         ui = UInput.from_device(dev, name="Filtered Touchscreen")
-        resetcorner = ((775, 800), (0, 25))
+        resetcorner = ((740, 800), (0, 60))
     return dev, ui
 
 def touch_thread(dev, ui):
