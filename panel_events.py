@@ -381,6 +381,7 @@ def get_seconds_until_next(target_times):
 
 def periodic_browser_restart(timelist):
     global browser
+    log.item(f"Restart browser at {timelist}")
     while True:
         sleep_duration = get_seconds_until_next(timelist)
         log.item(f"Sleeping efficiently for {sleep_duration} seconds...")
@@ -449,8 +450,8 @@ if __name__ == "__main__":
         else:
             msgwait -= 1
         time.sleep(1)
-
-    threading.Thread(target=periodic_browser_restart, args=(browser,)).start()
+    log.item("Start Browser Restart Thread")
+    threading.Thread(target=periodic_browser_restart, args=(browserretarttimes,)).start()
 
 
     if kiosk_baseurl is None: # haven't set up this kiosk in HA yet else retained MQTT message would have set this
