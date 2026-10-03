@@ -205,6 +205,7 @@ def touch_thread(dev, ui):
 
     current_x = 0
     current_y = 0
+    pendingsingle = False
 
     log.item(f"Listening for events on {dev.name}")
 
@@ -276,9 +277,11 @@ def touch_thread(dev, ui):
                     if now - last_tap_time < DOUBLE_TAP_WINDOW:
                         tap_count += 1
                     else:
+                        if pendingsingle:
+                            log.item(f"Actual single at {pendingx}, {pendingy}", level=1)
+                            pendingsingle = False
                         tap_count = 1
                     last_tap_time = now
-                else:
 
                     if tap_count == 2:
                         log.item(f"Double tap detected at {current_x}, {current_y}", level=1)
@@ -286,7 +289,14 @@ def touch_thread(dev, ui):
                             log.item("Got a screen restart")
                         tap_count = 0
                     elif tap_count == 1:
-                        log.item(f"Single tap detected at {current_x}, {current_y}", level=1)
+                        log.item(f"Pending single tap detected at {current_x}, {current_y}", level=1)
+                        pendingsingle = True
+                        pendingx = current_x
+                        pendingy = current_y
+                elif pendingsingle:
+                    log.item(f"Actual single (t/o) at {pendingx}, {pendingy}", level=1)
+                    pendingsingle = False
+
         if swallow_gesture == 'no':
             log.item(f"Reflect event {categorize(event)}",level=3)
             ui.write_event(event)
