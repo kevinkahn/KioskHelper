@@ -278,6 +278,7 @@ def touch_thread(dev, ui):
                     else:
                         tap_count = 1
                     last_tap_time = now
+                else:
 
                     if tap_count == 2:
                         log.item(f"Double tap detected at {current_x}, {current_y}", level=1)
