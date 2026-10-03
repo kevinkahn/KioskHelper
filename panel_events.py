@@ -191,7 +191,7 @@ def GrabTouchScreen():
 
 def touch_thread(dev, ui):
     log.item(f"Start Touch Thread {dev.name}, {ui.name}")
-    swallow_gesture = False
+    swallow_gesture = 'no' # values are no, last, yes
     touch_active = False
 
     current_x = 0
@@ -225,7 +225,7 @@ def touch_thread(dev, ui):
                 touch_active = True
                 if brightnessmgr.screenisdim:
                     brightnessmgr.wake_screen()
-                    swallow_gesture = True
+                    swallow_gesture = 'yes'
                     log.item(f"Swallow this gesture {event}")
                 start_x = current_x if 'current_x' in locals() else 0
                 start_y = current_y if 'current_y' in locals() else 0
@@ -233,9 +233,9 @@ def touch_thread(dev, ui):
                 log.item(f"Touch down: {start_x}, {start_y}", level=3)
             elif event.value == 0:  # Touch up
                 touch_active = False
-                if swallow_gesture:
-                    swallow_gesture = False
-                    log.item(f"End swallow gesture {event}")
+                if swallow_gesture == 'yes':
+                    swallow_gesture = 'last'
+                    log.item(f"Ending swallow gesture {event}")
 
 
                 touch_down = False
@@ -275,9 +275,12 @@ def touch_thread(dev, ui):
                         tap_count = 0
                     elif tap_count == 1:
                         log.item("Single tap detected")
-        if not swallow_gesture:
+        if swallow_gesture == 'no':
             log.item(f"Reflect event {event}")
             ui.write_event(event)
+        elif swallow_gesture == 'last':
+            log.item(f"Swallowed last event {event}")
+            swallow_gesture = 'no'
         else:
             log.item(f"Swallowed event {event}")
             #if event.type == ecodes.EV_SYN:
