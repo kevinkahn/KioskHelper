@@ -30,7 +30,7 @@ echo "<labwc_config>
 </labwc_config>
 " >> rc.xml
 echo 'KERNEL=="uinput", SUBSYSTEM=="misc", OPTIONS+="static_node=uinput", TAG+="uaccess", GROUP="input", MODE="0660"' | sudo tee /etc/udev/rules.d/99-uinput.rules
-
+echo 'ATTRS{name}=="Filtered Touchscreen Flipped", ENV{LIBINPUT_CALIBRATION_MATRIX}="-1 0 1 0 -1 1 0 0 1"' | sudo tee /etc/udev/rules.d/99-virtual-touchscreen.rules
 echo "On pi desktop open browser with:"
 echo "/usr/lib/chromium/chromium --user-deta-dir=/home/pi/.config/chromium-kioskscreen 192.168.1.15:8123?browser_ID=kiosk_dev7x"
 echo "log in as kioskscreen, a"

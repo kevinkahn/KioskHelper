@@ -186,7 +186,12 @@ def GrabTouchScreen():
     event_dev = find_touchscreen_event()
     dev = InputDevice(event_dev)
     dev.grab()
-    ui = UInput.from_device(dev, name="Filtered Touchscreen")
+    if os.path.exists("/home/pi/fliptouch"):
+        log.item("Flip Touchscreen")
+        ui = UInput.from_device(dev, name="Filtered Touchscreen Flipped")
+    else:
+        log.item("Normal Touchscreen")
+        ui = UInput.from_device(dev, name="Filtered Touchscreen")
     return dev, ui
 
 def touch_thread(dev, ui):
