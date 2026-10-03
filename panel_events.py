@@ -199,6 +199,7 @@ def GrabTouchScreen():
     return dev, ui
 
 def touch_thread(dev, ui):
+    global browser
     log.item(f"Start Touch Thread {dev.name}, {ui.name}")
     swallow_gesture = 'no' # values are no, (timestamp of last), yes
     touch_active = False
@@ -283,6 +284,8 @@ def touch_thread(dev, ui):
                         log.item(f"Double tap detected at {current_x}, {current_y}", level=1)
                         if resetcorner[0][0] <= current_x <= resetcorner[0][1] and resetcorner[1][0] <= current_y <= resetcorner[1][1]:
                             log.item("Got a screen restart")
+                            browser.kill()
+                            browser = start_browser(kiosk_baseurl, kioskname)
                         tap_count = 0
                     elif tap_count == 1:
                         log.item(f"Single tap detected at {current_x}, {current_y}", level=1)
