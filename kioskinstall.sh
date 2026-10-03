@@ -35,10 +35,7 @@ echo "On pi desktop open browser with:"
 echo "/usr/lib/chromium/chromium --user-deta-dir=/home/pi/.config/chromium-kioskscreen 192.168.1.15:8123?browser_ID=kiosk_dev7x"
 echo "log in as kioskscreen, a"
 echo "Open browser_mod from side panel and set the browser id in the name box"
-echo "fix udev"
-echo 'sudo nano /etc/udev/rules.d/99-uinput.rules'
-echo 'KERNEL=="uinput", MODE="0660", GROUP="input"'
-echo 'If need to invert touch screen add a udev rule: ATTRS{name}=="Your Virtual Device Name", ENV{LIBINPUT_CALIBRATION_MATRIX}="-1 0 1 0 -1 1 0 0 1"'
+echo 'If need to invert touch screen: touch fliptouch in home dir'
 
 
 

@@ -276,10 +276,10 @@ def touch_thread(dev, ui):
                     last_tap_time = now
 
                     if tap_count == 2:
-                        log.item("Double tap detected!")
+                        log.item(f"Double tap detected at {current_x}, {current_y}", level=1)
                         tap_count = 0
                     elif tap_count == 1:
-                        log.item("Single tap detected")
+                        log.item(f"Single tap detected at {current_x}, {current_y}", level=1)
         if swallow_gesture == 'no':
             log.item(f"Reflect event {categorize(event)}",level=3)
             ui.write_event(event)
