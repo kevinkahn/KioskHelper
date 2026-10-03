@@ -226,8 +226,7 @@ def touch_thread(dev, ui):
                 if brightnessmgr.screenisdim:
                     brightnessmgr.wake_screen()
                     swallow_gesture = True
-                    log.item("Swallow this gesture")
-
+                    log.item(f"Swallow this gesture {event}")
                 start_x = current_x if 'current_x' in locals() else 0
                 start_y = current_y if 'current_y' in locals() else 0
                 start_time = time.time()
@@ -236,7 +235,7 @@ def touch_thread(dev, ui):
                 touch_active = False
                 if swallow_gesture:
                     swallow_gesture = False
-                    log.item("End swallow gesture")
+                    log.item(f"End swallow gesture {event}")
 
 
                 touch_down = False
