@@ -226,7 +226,7 @@ def touch_thread(dev, ui):
                 if brightnessmgr.screenisdim:
                     brightnessmgr.wake_screen()
                     swallow_gesture = 'yes'
-                    log.item(f"Swallow this gesture {event}")
+                    log.item(f"Swallow this gesture {categorize(event)}")
                 start_x = current_x if 'current_x' in locals() else 0
                 start_y = current_y if 'current_y' in locals() else 0
                 start_time = time.time()
@@ -235,7 +235,7 @@ def touch_thread(dev, ui):
                 touch_active = False
                 if swallow_gesture == 'yes':
                     swallow_gesture = 'last'
-                    log.item(f"Ending swallow gesture {event}")
+                    log.item(f"Ending swallow gesture {categorize(event)}")
 
 
                 touch_down = False
@@ -276,13 +276,13 @@ def touch_thread(dev, ui):
                     elif tap_count == 1:
                         log.item("Single tap detected")
         if swallow_gesture == 'no':
-            log.item(f"Reflect event {event}")
+            log.item(f"Reflect event {categorize(event)}")
             ui.write_event(event)
         elif swallow_gesture == 'last':
-            log.item(f"Swallowed last event {event}")
+            log.item(f"Swallowed last event {categorize(event)}")
             swallow_gesture = 'no'
         else:
-            log.item(f"Swallowed event {event}")
+            log.item(f"Swallowed event {categorize(event)}")
             #if event.type == ecodes.EV_SYN:
             #    ui.syn()
 
