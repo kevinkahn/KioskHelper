@@ -13,7 +13,7 @@ class BrightnessManager:
         self.activescreenlevel = 100
         self.screenreturntodim = timeout
         self.set_brightness(self.idlescreenlevel)
-        self.screenisdim = (self.activescreenlevel == self.idlescreenlevel)
+        self.screenisdim = (self.activescreenlevel != self.idlescreenlevel)
 
     def setdefaultlevel(self, value):
         self.idlescreenlevel = value

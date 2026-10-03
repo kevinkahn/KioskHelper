@@ -278,8 +278,8 @@ def touch_thread(dev, ui):
         if not swallow_gesture:
             log.item(f"Reflect event {event}")
             ui.write_event(event)
-            if event.type == ecodes.EV_SYN:
-                ui.syn()
+            #if event.type == ecodes.EV_SYN:
+            #    ui.syn()
 
 
 def initialize_browser_environment(profile_dir, kiosknm):
