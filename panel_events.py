@@ -47,6 +47,7 @@ localnetcode = get_local_ip_gp()
 screenbrightness = 100
 screenreturntodim = 15
 activebrightness = 100
+resetcorner = ((0,0),(0,0))
 
 # Node name is pi dns name
 nodename = os.uname().nodename
@@ -182,6 +183,7 @@ def sendbrowsercontrol(command):
 # Touch Listener
 # ---------------------------
 def GrabTouchScreen():
+    global resetcorner
     log.item("Grabbing Touchscreen")
     event_dev = find_touchscreen_event()
     dev = InputDevice(event_dev)
@@ -189,9 +191,11 @@ def GrabTouchScreen():
     if os.path.exists("/home/pi/fliptouch"):
         log.item("Flip Touchscreen")
         ui = UInput.from_device(dev, name="Filtered Touchscreen Flipped")
+        resetcorner = ((0,25),(455,480))
     else:
         log.item("Normal Touchscreen")
         ui = UInput.from_device(dev, name="Filtered Touchscreen")
+        resetcorner = ((775, 800), (0, 25))
     return dev, ui
 
 def touch_thread(dev, ui):
@@ -277,6 +281,8 @@ def touch_thread(dev, ui):
 
                     if tap_count == 2:
                         log.item(f"Double tap detected at {current_x}, {current_y}", level=1)
+                        if resetcorner[0][0] <= current_x <= resetcorner[0][1] and resetcorner[1][0] <= current_y <= resetcorner[1][1]:
+                            log.item("Got a screen restart")
                         tap_count = 0
                     elif tap_count == 1:
                         log.item(f"Single tap detected at {current_x}, {current_y}", level=1)
