@@ -9,7 +9,7 @@ class BrightnessManager:
         self.timer = None
         self.lock = threading.Lock()
         self.touchesactive = False
-        self.idlescreenlevel = 100
+        self.idlescreenlevel = 25
         self.activescreenlevel = 100
         self.screenreturntodim = timeout
         self.set_brightness(self.idlescreenlevel)

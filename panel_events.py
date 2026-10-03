@@ -278,6 +278,8 @@ def touch_thread(dev, ui):
         if not swallow_gesture:
             log.item(f"Reflect event {event}")
             ui.write_event(event)
+        else:
+            log.item(f"Swallowed event {event}")
             #if event.type == ecodes.EV_SYN:
             #    ui.syn()
 
