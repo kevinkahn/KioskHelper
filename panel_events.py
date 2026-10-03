@@ -2,6 +2,8 @@
 import json
 import subprocess
 import threading
+from random import randint
+
 import panelbrightness as pb
 import kiosklog as log
 import re
@@ -383,9 +385,10 @@ def periodic_browser_restart(timelist):
     global browser
     log.item(f"Restart browser at {timelist}")
     while True:
-        sleep_duration = get_seconds_until_next(timelist)
-        log.item(f"Sleeping efficiently for {sleep_duration} seconds...")
-        time.sleep(sleep_duration)
+        sleep_duration = (get_seconds_until_next(timelist))
+        jitter = randint(0, 120)
+        log.item(f"Sleeping efficiently for {sleep_duration} + {jitter} seconds")
+        time.sleep(sleep_duration + jitter)
         log.item(f"Periodic browser restart at {datetime.now().strftime('%H:%M:%S')}")
         browser.kill()
         time.sleep(1)
