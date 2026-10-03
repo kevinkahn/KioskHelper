@@ -226,7 +226,7 @@ def touch_thread(dev, ui):
                 if brightnessmgr.screenisdim:
                     brightnessmgr.wake_screen()
                     swallow_gesture = 'yes'
-                    log.item(f"Swallow this gesture {categorize(event)}")
+                    log.item(f"Swallow this gesture {categorize(event)}",level=3)
                 start_x = current_x if 'current_x' in locals() else 0
                 start_y = current_y if 'current_y' in locals() else 0
                 start_time = time.time()
@@ -235,7 +235,7 @@ def touch_thread(dev, ui):
                 touch_active = False
                 if swallow_gesture == 'yes':
                     swallow_gesture = event.timestamp()
-                    log.item(f"Ending swallow gesture {swallow_gesture}:{categorize(event)}")
+                    log.item(f"Ending swallow gesture {swallow_gesture}:{categorize(event)}",level=3)
 
 
                 touch_down = False
@@ -276,14 +276,14 @@ def touch_thread(dev, ui):
                     elif tap_count == 1:
                         log.item("Single tap detected")
         if swallow_gesture == 'no':
-            log.item(f"Reflect event {categorize(event)}")
+            log.item(f"Reflect event {categorize(event)}",level=3)
             ui.write_event(event)
         elif swallow_gesture == 'yes':
-            log.item(f"Swallowed event {categorize(event)}")
+            log.item(f"Swallowed event {categorize(event)}",level=3)
         else:
-            log.item(f"Swallowing last event(s) {swallow_gesture}:{categorize(event)}")
+            log.item(f"Swallowing last event(s) {swallow_gesture}:{categorize(event)}",level=3)
             if swallow_gesture != event.timestamp():
-                log.item(f"Reflect post swallow event {swallow_gesture}:{categorize(event)}")
+                log.item(f"Reflect post swallow event {swallow_gesture}:{categorize(event)}",level=3)
                 ui.write_event(event)
                 swallow_gesture = 'no'
 
