@@ -397,6 +397,24 @@ def periodic_browser_restart(timelist):
 if __name__ == "__main__":
     log.rotate_logs()
     log.item(f"Kiosk starting with loglevel {log.LogLevel}")
+    if os.path.exists("/home/pi/restarttimes.txt"):
+        browserretarttimes = []
+        with open("/home/pi/restarttimes.txt", "r") as f:
+            for line in f:
+                clean_line = line.strip()
+                # Skip empty lines or comment lines
+                if not clean_line or clean_line.startswith("#"):
+                    continue
+                # Basic validation: ensure it follows the format HH:MM
+                try:
+                    datetime.strptime(clean_line, "%H:%M")
+                    browserretarttimes.append(clean_line)
+                    log.item(f" -> Loaded target time: {clean_line}")
+                except ValueError:
+                    print(f" [Error] Skipping invalid format line: '{line.strip()}'")
+    log.item(f"Browser retart times: {browserretarttimes}")
+
+
     try:
         # Read the raw model name from the system's devicetree
         with open('/proc/device-tree/model', 'r') as f:
