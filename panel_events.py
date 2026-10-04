@@ -117,12 +117,14 @@ def on_message(client, userdata, msg):
         if topic in BRIGHTNESS_TOPICS:
             rawvalue = msg.payload.decode()
             value = [item.strip() for item in rawvalue.strip().split(',')]
-            log.item(f"SCreen level req: {msg.payload.decode()}  {value}")
+            log.item(f"Screen level req: {msg.payload.decode()}  {value}")
+            if len(value) != 2:
+                value = ['ERROR', 0]
             value = max(0, min(255, value))
             if value[0] == 'dim':
-                brightnessmgr.setidlescreenlevel(int(value[1]))
+                brightnessmgr.setidlescreenlevel(max(0, min(255, int(value[1]))))
             elif value[0] == 'active':
-                brightnessmgr.setactivescreenlevel(int(value[1]))
+                brightnessmgr.setactivescreenlevel(max(0, min(255, int(value[1]))))
             elif value[0] == 'timeout':
                 brightnessmgr.screenreturntodim(int(value[1]))
             else:
