@@ -8,17 +8,18 @@ class BrightnessManager:
     def __init__(self, timeout=10):
         self.timer = None
         self.lock = threading.Lock()
+        self.actualscreenlevel = 100
         self.touchesactive = False
         self.idlescreenlevel = 100
         self.activescreenlevel = 100
         self.screenreturntodim = timeout
         self.set_brightness(self.idlescreenlevel)
-        self.screenisdim = (self.activescreenlevel != self.idlescreenlevel)
+        self.screenisdim = (self.activescreenlevel != self.actualscreenlevel)
 
     def setidlescreenlevel(self, value):
         self.idlescreenlevel = value
         self.set_brightness(self.idlescreenlevel)
-        self.screenisdim = (self.activescreenlevel != self.idlescreenlevel)
+        self.screenisdim = (self.activescreenlevel != self.actualscreenlevel)
 
     def settimeout(self, value):
         self.screenreturntodim = value
@@ -26,8 +27,7 @@ class BrightnessManager:
     def setactivescreenlevel(self, value):
         self.activescreenlevel = value
 
-    @staticmethod
-    def get_brightness():
+    def get_brightness(self):
         # 1. Check for kernel backlight devices
         backlight_root = "/sys/class/backlight"
         if os.path.isdir(backlight_root):
@@ -41,13 +41,14 @@ class BrightnessManager:
                     with open(brightness_file, "r") as f:
                         v = f.read()
                     log.item(f"Got {v} ", level=3)
+                    self.actualscreenlevel = int(v)
                     return int(v)
                 except Exception as e:
                     log.item(f"[brightness] Failed reading from {brightness_file}: {e}")
+        self.actualscreenlevel = 100
         return 100
 
-    @staticmethod
-    def set_brightness(value):
+    def set_brightness(self, value):
         # 1. Check for kernel backlight devices
         backlight_root = "/sys/class/backlight"
         if os.path.isdir(backlight_root):
@@ -63,12 +64,13 @@ class BrightnessManager:
                     log.item(f"[brightness] Set {dev} to {value}")
                 except Exception as e:
                     log.item(f"[brightness] Failed writing to {brightness_file}: {e}")
+        self.actualscreenlevel = value
 
     def restore_brightness(self):
         with self.lock:
             log.item(f"Restore to {self.idlescreenlevel}")
             self.set_brightness(self.idlescreenlevel)
-            self.screenisdim = (self.activescreenlevel != self.idlescreenlevel)
+            self.screenisdim = (self.activescreenlevel != self.actualscreenlevel)
             if issuebrowsercontrol is not None:
                 issuebrowsercontrol('gotourl')
             self.timer = None
@@ -86,7 +88,7 @@ class BrightnessManager:
                 self.touchesactive = True
                 log.item(f"Touch while dim, set to  ({self.activescreenlevel})")
                 self.set_brightness(self.activescreenlevel)  # temporary brightness
-                self.screenisdim = (self.activescreenlevel != self.idlescreenlevel)
+                self.screenisdim = (self.activescreenlevel != self.actualscreenlevel)
 
             # Reset timer
             if self.timer is not None:

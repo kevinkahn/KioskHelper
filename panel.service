@@ -4,6 +4,7 @@ After=graphical-session.target
 Wants=graphical-session.target
 
 [Service]
+TimeoutStopSec=10s
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=/home/pi/.Xauthority
 Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus

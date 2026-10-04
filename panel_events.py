@@ -117,10 +117,9 @@ def on_message(client, userdata, msg):
         if topic in BRIGHTNESS_TOPICS:
             rawvalue = msg.payload.decode()
             value = [item.strip() for item in rawvalue.strip().split(',')]
-            log.item(f"Screen level req: {msg.payload.decode()}  {value}")
+            log.item(f"Screen level req: {msg.payload.decode()} with param: {value}")
             if len(value) != 2:
                 value = ['ERROR', 0]
-            value = max(0, min(255, value))
             if value[0] == 'dim':
                 brightnessmgr.setidlescreenlevel(max(0, min(255, int(value[1]))))
             elif value[0] == 'active':
@@ -241,6 +240,7 @@ def touch_thread(dev, ui):
                 touch_down = True
                 touch_active = True
                 if brightnessmgr.screenisdim:
+                    log.item(f"Touch down screen brightness {brightnessmgr.screenisdim}", level=3)
                     brightnessmgr.wake_screen()
                     swallow_gesture = 'yes'
                     log.item(f"Swallow this gesture {categorize(event)}",level=3)
