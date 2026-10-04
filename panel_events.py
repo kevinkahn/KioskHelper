@@ -74,9 +74,9 @@ TOPIC_CONTROL = f"wallpanel/{nodename}/control"
 TOPIC_GP_CONTROL = f"wallpanel/{locationgp}/control"
 TOPIC_ALL_CONTROL = f"wallpanel/all/control"
 
-TOPIC_BRIGHTNESS = f"wallpanel/{nodename}/brightness"
-TOPIC_GP_BRIGHTNESS = f"wallpanel/{locationgp}/brightness"
-TOPIC_ALL_BRIGHTNESS = f"wallpanel/all/brightness"
+TOPIC_SCREENLEVEL = f"wallpanel/{nodename}/screenlevel"
+TOPIC_GP_SCREENLEVEL = f"wallpanel/{locationgp}/screenlevel"
+TOPIC_ALL_SCREENLEVEL = f"wallpanel/all/screenlevel"
 
 DISCOVERY_TOPIC = f"{HA_ID}/text/{kioskbaseurlentity}/config"
 STATE_TOPIC = f"{HA_ID}/text/{kioskbaseurlentity}/state"
@@ -84,7 +84,7 @@ COMMAND_TOPIC = f"{HA_ID}/text/{kioskbaseurlentity}/set"
 HAIP="0.0.0.0"
 
 CONTROL_TOPICS = [TOPIC_CONTROL, TOPIC_GP_CONTROL, TOPIC_ALL_CONTROL]
-BRIGHTNESS_TOPICS = [TOPIC_BRIGHTNESS, TOPIC_GP_BRIGHTNESS, TOPIC_ALL_BRIGHTNESS]
+BRIGHTNESS_TOPICS = [TOPIC_SCREENLEVEL, TOPIC_GP_SCREENLEVEL, TOPIC_ALL_SCREENLEVEL]
 
 
 def find_touchscreen_event():
@@ -109,19 +109,24 @@ def find_touchscreen_event():
     log.item("[touch] No touchscreen found, falling back to event0")
     return "/dev/input/event0"
 
-# ---------------------------
-# MQTT Brightness Listener
-# ---------------------------
 def on_message(client, userdata, msg):
-    global kiosk_baseurl, HAIP
+    global kiosk_baseurl, HAIP, screenreturntodim
     try:
         topic = msg.topic
         log.item(f'[on_message] Topic: {topic}')
         if topic in BRIGHTNESS_TOPICS:
-            value = int(msg.payload.decode())
-            log.item(f"Bright req: {msg.payload.decode()}  {value}")
+            rawvalue = msg.payload.decode()
+            value = [item.strip() for item in rawvalue.strip().split(',')]
+            log.item(f"SCreen level req: {msg.payload.decode()}  {value}")
             value = max(0, min(255, value))
-            brightnessmgr.setdefaultlevel(value)
+            if value[0] == 'dim':
+                brightnessmgr.setidlescreenlevel(int(value[1]))
+            elif value[0] == 'active':
+                brightnessmgr.setactivescreenlevel(int(value[1]))
+            elif value[0] == 'timeout':
+                brightnessmgr.screenreturntodim(int(value[1]))
+            else:
+                log.item(f"Unknown brightness command: {value}")
         elif topic in CONTROL_TOPICS:
             rawvalue = msg.payload.decode()
             value = [item.strip() for item in rawvalue.strip().split(',')]
@@ -154,10 +159,6 @@ def on_message(client, userdata, msg):
             log.item(f"[on_message] TOPIC_HAIP Home Assistant IP: {HAIP}")
         else:
             log.item(f"[on_message] Unknown MQTT topic: {topic} with value: {msg.payload.decode()}")
-
-
-
-
 
     except Exception as e:
         log.item(f"MQTT Error {e}")

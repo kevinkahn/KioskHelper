@@ -5,7 +5,7 @@ import os
 
 LOG_FILE = Path("log.txt")
 MAX_LOGS = 5
-LogLevel = 1
+LogLevel = 3
 
 
 

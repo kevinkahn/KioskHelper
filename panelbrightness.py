@@ -15,15 +15,15 @@ class BrightnessManager:
         self.set_brightness(self.idlescreenlevel)
         self.screenisdim = (self.activescreenlevel != self.idlescreenlevel)
 
-    def setdefaultlevel(self, value):
+    def setidlescreenlevel(self, value):
         self.idlescreenlevel = value
         self.set_brightness(self.idlescreenlevel)
-        self.screenisdim = True
+        self.screenisdim = (self.activescreenlevel != self.idlescreenlevel)
 
     def settimeout(self, value):
         self.screenreturntodim = value
 
-    def setactivebrightness(self, value):
+    def setactivescreenlevel(self, value):
         self.activescreenlevel = value
 
     @staticmethod
@@ -68,7 +68,7 @@ class BrightnessManager:
         with self.lock:
             log.item(f"Restore to {self.idlescreenlevel}")
             self.set_brightness(self.idlescreenlevel)
-            self.screenisdim = True
+            self.screenisdim = (self.activescreenlevel != self.idlescreenlevel)
             if issuebrowsercontrol is not None:
                 issuebrowsercontrol('gotourl')
             self.timer = None
@@ -86,7 +86,7 @@ class BrightnessManager:
                 self.touchesactive = True
                 log.item(f"Touch while dim, set to  ({self.activescreenlevel})")
                 self.set_brightness(self.activescreenlevel)  # temporary brightness
-                self.screenisdim = False
+                self.screenisdim = (self.activescreenlevel != self.idlescreenlevel)
 
             # Reset timer
             if self.timer is not None:
