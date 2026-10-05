@@ -51,7 +51,7 @@ screenbrightness = 100
 screenreturntodim = 15
 activebrightness = 100
 resetcorner = ((0,0),(0,0))
-browserretarttimes = ["03:14","11:15","17:30"]
+browserrestarttimes = []
 
 # Node name is pi dns name
 nodename = os.uname().nodename
@@ -405,7 +405,6 @@ if __name__ == "__main__":
     log.rotate_logs()
     log.item(f"Kiosk starting with loglevel {log.LogLevel}")
     if os.path.exists("/home/pi/restarttimes.txt"):
-        browserretarttimes = []
         with open("/home/pi/restarttimes.txt", "r") as f:
             for line in f:
                 clean_line = line.strip()
@@ -415,11 +414,14 @@ if __name__ == "__main__":
                 # Basic validation: ensure it follows the format HH:MM
                 try:
                     datetime.strptime(clean_line, "%H:%M")
-                    browserretarttimes.append(clean_line)
+                    browserrestarttimes.append(clean_line)
                     log.item(f" -> Loaded target time: {clean_line}")
                 except ValueError:
                     print(f" [Error] Skipping invalid format line: '{line.strip()}'")
-    log.item(f"Browser retart times: {browserretarttimes}")
+    if browserrestarttimes == []:
+        log.item(f"No browser periodic restart")
+    else:
+        log.item(f"Browser retart times: {browserrestarttimes}")
 
 
     try:
@@ -456,9 +458,9 @@ if __name__ == "__main__":
         else:
             msgwait -= 1
         time.sleep(1)
-    log.item("Start Browser Restart Thread")
-    threading.Thread(target=periodic_browser_restart, args=(browserretarttimes,)).start()
-
+    if browserrestarttimes != []:
+        log.item("Start Browser Restart Thread")
+        threading.Thread(target=periodic_browser_restart, args=(browserrestarttimes,)).start()
 
     if kiosk_baseurl is None: # haven't set up this kiosk in HA yet else retained MQTT message would have set this
         log.item('Initializing kiosk in HA')
