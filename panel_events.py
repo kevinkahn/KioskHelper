@@ -9,6 +9,7 @@ import mqtthandling as mh
 import kiosklog as log
 import re
 import parameters as p
+import touchhandling as th
 
 from evdev import InputDevice, ecodes, categorize, UInput
 import socket
@@ -45,7 +46,7 @@ locationgp = ('error', 'pdx', 'pgaw')[localnetcode] # user for group browser com
 HA_ID = ('error', 'HASS', 'HASSpga')[localnetcode]
 log.item(f"Using local network: {localnetcode} Local group: {locationgp} HA Name: {HA_ID}")
 
-resetcorner = ((0,0),(0,0))
+#Z resetcorner = ((0,0),(0,0))
 
 
 def handle_sigterm(signum, frame):
@@ -60,6 +61,7 @@ def handle_sigterm(signum, frame):
     sys.exit(0)
 signal.signal(signal.SIGTERM, handle_sigterm)
 
+'''
 def find_touchscreen_event():
     candidates = glob.glob("/dev/input/event*")
 
@@ -208,7 +210,7 @@ def touch_thread(dev, ui):
 
             #if event.type == ecodes.EV_SYN:
             #    ui.syn()
-
+'''
 
 def initialize_browser_environment(profile_dir, kiosknm):
     initurl = f"{p.HAIP}/lovelace/0?BrowserID={kiosknm}"
@@ -339,7 +341,7 @@ if __name__ == "__main__":
         extrachromeflags = []
 
     # Lock the touchscreen to prevent browser from using it directly
-    device, virtualtouch = GrabTouchScreen()
+    device, virtualtouch = th.GrabTouchScreen()
 
     # Set up mqtt and brightness managers
     mh.mq = mh.mqtt_handler(nodename, locationgp, HA_ID, kioskbaseurlentity)
@@ -349,6 +351,8 @@ if __name__ == "__main__":
 
     mh.mq.get_HAIP()
 
+    th.restart_browser = start_browser
+    th.kioskname = kioskname
     if browserrestarttimes:
         log.item("Start Browser Restart Thread")
         threading.Thread(target=periodic_browser_restart, args=(browserrestarttimes,)).start()
@@ -383,4 +387,4 @@ if __name__ == "__main__":
 
     log.item(f"Kiosk dashboard passed to start browser: {p.kiosk_baseurl},{kioskname} with prefix {p.HAIP}")
     start_browser(p.kiosk_baseurl, kioskname)
-    touch_thread(device, virtualtouch)
+    th.touch_thread(device, virtualtouch)
