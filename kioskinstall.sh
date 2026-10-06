@@ -12,6 +12,8 @@ python3 -m venv /home/pi/kiosk/venv
 source /home/pi/kiosk/venv/bin/activate
 pip install --upgrade pip
 pip install paho-mqtt evdev
+pip install jeepney
+sudo apt update && sudo apt install mako-notifier libnotify-bin
 systemctl --user daemon-reload
 systemctl --user enable panel.service
 systemctl --user start panel.service

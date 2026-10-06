@@ -16,6 +16,7 @@ import os, glob, time, sys
 import signal
 from pathlib import Path
 from datetime import datetime, timedelta
+from notification import notify, clear
 
 def get_local_ip_gp():
     # return the local net number for choosing local HA
@@ -352,7 +353,7 @@ if __name__ == "__main__":
         log.item("Start Browser Restart Thread")
         threading.Thread(target=periodic_browser_restart, args=(browserrestarttimes,)).start()
 
-    if p.kiosk_baseurl is None:
+    if p.kiosk_baseurl == '':
     # haven't set up this kiosk in HA yet else retained MQTT message would have set this
         log.item('Initializing kiosk in HA')
         discovery_payload = {
@@ -367,6 +368,14 @@ if __name__ == "__main__":
             "mode": "text"
         }
         mh.mq.publish_discovery(discovery_payload)
+        log.item(f"Set value for {nodename} Baseurl in Home Assistant")
+        notify(f"Set value for text.{nodename.replace('-','_')}_baseurl")
+        waittime = 0
+        while p.kiosk_baseurl == '':
+            time.sleep(30)
+            waittime +=30
+            notify(f"Still waiting {waittime} for text.{nodename.replace('-','_')}_baseurl")
+        clear()
         mh.mq.publish_state(p.kiosk_baseurl)
         time.sleep(1)
     else:

@@ -1,4 +1,4 @@
-kiosk_baseurl: str= None
+kiosk_baseurl: str= ''
 browser = None
 HAIP="0.0.0.0"
 
