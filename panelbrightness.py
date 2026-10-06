@@ -2,10 +2,8 @@ import os
 import threading
 import kiosklog as log
 
-issuebrowsercontrol: None
-
 class BrightnessManager:
-    def __init__(self, timeout=10):
+    def __init__(self, timeout=10, issuebrowsercontrol=None):
         self.timer = None
         self.lock = threading.Lock()
         self.actualscreenlevel = 100
@@ -15,6 +13,7 @@ class BrightnessManager:
         self.screenreturntodim = timeout
         self.set_brightness(self.idlescreenlevel)
         self.screenisdim = (self.activescreenlevel != self.actualscreenlevel)
+        self.issuebrowsercontrol = issuebrowsercontrol
 
     def setidlescreenlevel(self, value):
         self.idlescreenlevel = value
@@ -71,8 +70,8 @@ class BrightnessManager:
             log.item(f"Restore to {self.idlescreenlevel}")
             self.set_brightness(self.idlescreenlevel)
             self.screenisdim = (self.activescreenlevel != self.actualscreenlevel)
-            if issuebrowsercontrol is not None:
-                issuebrowsercontrol('gotourl')
+            if self.issuebrowsercontrol is not None:
+                self.issuebrowsercontrol('gotourl')
             self.timer = None
             self.touchesactive = False
 
@@ -98,3 +97,5 @@ class BrightnessManager:
             self.timer = threading.Timer(self.screenreturntodim, self.restore_brightness)
             self.timer.daemon = True
             self.timer.start()
+
+bm: BrightnessManager | None = None

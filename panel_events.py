@@ -1,33 +1,21 @@
 #/usr/bin/env python3
-import json
+
 import subprocess
 import threading
 from random import randint
 
 import panelbrightness as pb
+import mqtthandling as mh
 import kiosklog as log
 import re
+import parameters as p
 
-import paho.mqtt.client as mqtt
-import paho.mqtt.publish as publish
 from evdev import InputDevice, ecodes, categorize, UInput
 import socket
 import os, glob, time, sys
 import signal
 from pathlib import Path
 from datetime import datetime, timedelta
-
-
-def handle_sigterm(signum, frame):
-    """Callback function triggered when SIGTERM is received."""
-    log.item(f"Received SIGTERM (signal {signum}). Cleaning up resources...")
-    try:
-        if not browser is None:
-            browser.terminate()
-        log.item("Terminated browser")
-    except Exception as e:
-        log.item(f"Failed to terminate browser: {e}")
-    sys.exit(0)
 
 def get_local_ip_gp():
     # return the local net number for choosing local HA
@@ -43,49 +31,33 @@ def get_local_ip_gp():
         s.close()
     return int(ip.split('.')[2])
 
-signal.signal(signal.SIGTERM, handle_sigterm)
-
 browser: subprocess.Popen | None = None
 localnetcode = get_local_ip_gp()
-screenbrightness = 100
-screenreturntodim = 15
-activebrightness = 100
-resetcorner = ((0,0),(0,0))
 browserrestarttimes = []
-
 # Node name is pi dns name
 nodename = os.uname().nodename
 # Kiosk name is the name for the browser in HA
 kioskname = f"kiosk_{nodename.replace('rpi-','')}"
 kioskbaseurlentity = f"{kioskname}_baseurl"
-kiosk_baseurl = None  # actual url once established running
-log.item(f"Kiosk Info: node: {nodename} kioskname: {kioskname} kioskbaseurlentity: {kioskbaseurlentity} kiosk_baseurl: {kiosk_baseurl}", level=3)
-
+log.item(f"Kiosk Info: node: {nodename} kioskname: {kioskname} kioskbaseurlentity: {kioskbaseurlentity} kiosk_baseurl: {p.kiosk_baseurl}", level=3)
 locationgp = ('error', 'pdx', 'pgaw')[localnetcode] # user for group browser commands
-MQTT_HOST = "mqtt"
-HA_ID = ('error','HASS','HASSpga')[localnetcode]
+HA_ID = ('error', 'HASS', 'HASSpga')[localnetcode]
 log.item(f"Using local network: {localnetcode} Local group: {locationgp} HA Name: {HA_ID}")
 
-# MQTT topics
-TOPIC_TOUCH = f"wallpanel/{nodename}/touch"
-TOPIC_HAIP = f"wallpanel/{nodename}/haip-{locationgp}"
+resetcorner = ((0,0),(0,0))
 
-TOPIC_CONTROL = f"wallpanel/{nodename}/control"
-TOPIC_GP_CONTROL = f"wallpanel/{locationgp}/control"
-TOPIC_ALL_CONTROL = f"wallpanel/all/control"
 
-TOPIC_SCREENLEVEL = f"wallpanel/{nodename}/screenlevel"
-TOPIC_GP_SCREENLEVEL = f"wallpanel/{locationgp}/screenlevel"
-TOPIC_ALL_SCREENLEVEL = f"wallpanel/all/screenlevel"
-
-DISCOVERY_TOPIC = f"{HA_ID}/text/{kioskbaseurlentity}/config"
-STATE_TOPIC = f"{HA_ID}/text/{kioskbaseurlentity}/state"
-COMMAND_TOPIC = f"{HA_ID}/text/{kioskbaseurlentity}/set"
-HAIP="0.0.0.0"
-
-CONTROL_TOPICS = [TOPIC_CONTROL, TOPIC_GP_CONTROL, TOPIC_ALL_CONTROL]
-BRIGHTNESS_TOPICS = [TOPIC_SCREENLEVEL, TOPIC_GP_SCREENLEVEL, TOPIC_ALL_SCREENLEVEL]
-
+def handle_sigterm(signum, frame):
+    """Callback function triggered when SIGTERM is received."""
+    log.item(f"Received SIGTERM (signal {signum}). Cleaning up resources...")
+    try:
+        if not browser is None:
+            browser.terminate()
+        log.item("Terminated browser")
+    except Exception as e:
+        log.item(f"Failed to terminate browser: {e}")
+    sys.exit(0)
+signal.signal(signal.SIGTERM, handle_sigterm)
 
 def find_touchscreen_event():
     candidates = glob.glob("/dev/input/event*")
@@ -93,8 +65,8 @@ def find_touchscreen_event():
     for dev in candidates:
         name_path = f"/sys/class/input/{os.path.basename(dev)}/device/name"
         try:
-            with open(name_path, "r") as f:
-                name = f.read().strip().lower()
+            with open(name_path, "r") as devicesfile:
+                name = devicesfile.read().strip().lower()
 
             # Heuristics for touchscreen devices
             if any(keyword in name for keyword in [
@@ -108,82 +80,6 @@ def find_touchscreen_event():
 
     log.item("[touch] No touchscreen found, falling back to event0")
     return "/dev/input/event0"
-
-def on_message(client, userdata, msg):
-    global kiosk_baseurl, HAIP, screenreturntodim
-    try:
-        topic = msg.topic
-        log.item(f'[on_message] Topic: {topic}')
-        if topic in BRIGHTNESS_TOPICS:
-            rawvalue = msg.payload.decode()
-            value = [item.strip() for item in rawvalue.strip().split(',')]
-            log.item(f"Screen level req: {msg.payload.decode()} with param: {value}")
-            if len(value) != 2:
-                value = ['ERROR', 0]
-            if value[0] == 'dim':
-                brightnessmgr.setidlescreenlevel(max(0, min(255, int(value[1]))))
-            elif value[0] == 'active':
-                brightnessmgr.setactivescreenlevel(max(0, min(255, int(value[1]))))
-            elif value[0] == 'timeout':
-                brightnessmgr.screenreturntodim(int(value[1]))
-            else:
-                log.item(f"Unknown brightness command: {value}")
-        elif topic in CONTROL_TOPICS:
-            rawvalue = msg.payload.decode()
-            value = [item.strip() for item in rawvalue.strip().split(',')]
-            log.item(f"[on_message] Control Topic: {topic}  {value}")
-            if value[0] == 'reboot':
-                log.item("[reboot] Reboot node")
-                subprocess.run(["sudo", "reboot"])
-            elif value[0] == 'restart':
-                log.item("[restart] Restart kiosk")
-                subprocess.run(["systemctl", "--user", "restart", "panel"])
-            elif value[0] == 'update':
-                log.item("[update] Update kiosk")
-                subprocess.run(["git", "fetch"], cwd="/home/pi/kiosk")
-                subprocess.run(["git", "reset", "--hard"], cwd="/home/pi/kiosk")
-                subprocess.run(["git", "pull"], cwd="/home/pi/kiosk")
-                log.item("[restart] Restart kiosk")
-                subprocess.run(["systemctl","--user","restart","panel"])
-            elif value[0] == 'loglevel':
-                log.LogLevel = int(value[1])
-                log.item(f"[loglevel] Set loglevel to {value[1]}")
-            else:
-                log.item(f"[on_message] Unknown MQTT command: {topic}:  {value}")
-        elif topic == STATE_TOPIC:
-            value = msg.payload.decode()
-            log.item(f"[on_message] State Topic: {topic}  {value}")
-            # normalize to ip number so as not to confuse browser local storage
-            kiosk_baseurl = f"{value.partition("8123")[2]}"
-        elif topic == TOPIC_HAIP:
-            HAIP = msg.payload.decode()
-            log.item(f"[on_message] TOPIC_HAIP Home Assistant IP: {HAIP}")
-        else:
-            log.item(f"[on_message] Unknown MQTT topic: {topic} with value: {msg.payload.decode()}")
-
-    except Exception as e:
-        log.item(f"MQTT Error {e}")
-
-
-def mqtt_thread():
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-    client.connect(MQTT_HOST)
-    for topic in CONTROL_TOPICS:
-        client.subscribe(topic)
-    for topic in BRIGHTNESS_TOPICS:
-        client.subscribe(topic)
-    client.subscribe(STATE_TOPIC)
-    client.subscribe(TOPIC_HAIP)
-    log.item("Subscribed to all topics")
-    client.on_message = on_message
-    client.loop_forever()
-
-def returntobaseurl():
-    publish.single(f"wallpanel/{nodename}/returntobase", hostname=MQTT_HOST)
-
-def sendbrowsercontrol(command):
-    publish.single(f"wallpanel/{nodename}/browserctl", payload=command, hostname=MQTT_HOST)
-    log.item(f"sendbrowsercontrol command: {command}",level=2)
 
 # ---------------------------
 # Touch Listener
@@ -205,7 +101,6 @@ def GrabTouchScreen():
     return dev, ui
 
 def touch_thread(dev, ui):
-    global browser
     log.item(f"Start Touch Thread {dev.name}, {ui.name}")
     swallow_gesture = 'no' # values are no, (timestamp of last), yes
     touch_active = False
@@ -239,9 +134,9 @@ def touch_thread(dev, ui):
             if event.value == 1:  # Touch down
                 touch_down = True
                 touch_active = True
-                if brightnessmgr.screenisdim:
-                    log.item(f"Touch down screen brightness {brightnessmgr.screenisdim}", level=3)
-                    brightnessmgr.wake_screen()
+                if pb.bm.screenisdim:
+                    log.item(f"Touch down screen brightness {pb.bm.screenisdim}", level=3)
+                    pb.bm.wake_screen()
                     swallow_gesture = 'yes'
                     log.item(f"Swallow this gesture {categorize(event)}",level=3)
                 start_x = current_x if 'current_x' in locals() else 0
@@ -275,8 +170,8 @@ def touch_thread(dev, ui):
                         direction = "Down" if dy > 0 else "Up"
                     log.item(f"Swipe detected: {direction}: {dx}, {dy}, {dist}")
                     log.item(f"Coords: {start_x} {end_x}, {start_y} {end_y}")
-                    if direction in ("Down","Up"): sendbrowsercontrol("refresh")
-                    if direction in ("Right","Left"): sendbrowsercontrol("maintenance")
+                    if direction in ("Down","Up"): mh.mq.sendbrowsercontrol("refresh")
+                    if direction in ("Right","Left"): mh.mq.sendbrowsercontrol("maintenance")
                     tap_count = 0
                 elif duration < TAP_MAX_TIME:
                     # Check for Taps
@@ -292,9 +187,9 @@ def touch_thread(dev, ui):
                         if resetcorner[0][0] <= current_x <= resetcorner[0][1] and resetcorner[1][0] <= current_y <= resetcorner[1][1]:
                             log.item("Got a screen restart")
                             log.item("Kill existing browser")
-                            browser.kill()
+                            p.browser.kill()
                             time.sleep(1)
-                            browser = start_browser(kiosk_baseurl, kioskname)
+                            start_browser(p.kiosk_baseurl, kioskname)
                         tap_count = 0
                     elif tap_count == 1:
                         log.item(f"Single tap detected at {current_x}, {current_y}", level=1)
@@ -315,8 +210,7 @@ def touch_thread(dev, ui):
 
 
 def initialize_browser_environment(profile_dir, kiosknm):
-    global HAIP
-    initurl = f"{HAIP}/lovelace/0?BrowserID={kiosknm}"
+    initurl = f"{p.HAIP}/lovelace/0?BrowserID={kiosknm}"
     log.item(f"[initialize_browser_environment] Initializing {initurl}" )
     initbrowser = subprocess.run([
         "/usr/lib/chromium/chromium",
@@ -343,15 +237,15 @@ def initialize_browser_environment(profile_dir, kiosknm):
 
 
 def start_browser(burl, kiosknm):
-    global HAIP, browser
-    url = f"{HAIP}{burl}"
+    log.item(f"[start_browser] Starting {p.HAIP}" )
+    url = f"{p.HAIP}{burl}"
     profile_dir = "/home/pi/.config/chromium-kioskscreen"
     profilepath = Path(profile_dir)
     if not profilepath.is_dir():
         initialize_browser_environment(profile_dir, kiosknm)
 
     log.item(f"[start_browser] Starting in {url}")
-    browser = subprocess.Popen([
+    p.browser = subprocess.Popen([
         "/usr/lib/chromium/chromium",
         "--kiosk",
         "--no-first-run",
@@ -363,7 +257,6 @@ def start_browser(burl, kiosknm):
         "--user-data-dir=/home/pi/.config/chromium-kioskscreen"] +
         extrachromeflags + [f"{url}?BrowserID={kiosknm}"] )
     log.item("Browser started")
-    return browser
 
 def get_seconds_until_next(target_times):
     """Calculates exactly how many seconds to sleep until the next event."""
@@ -385,7 +278,6 @@ def get_seconds_until_next(target_times):
     return min(seconds_distances)
 
 def periodic_browser_restart(timelist):
-    global browser
     log.item(f"Restart browser at {timelist}")
     while True:
         sleep_duration = (get_seconds_until_next(timelist))
@@ -393,15 +285,14 @@ def periodic_browser_restart(timelist):
         log.item(f"Sleeping efficiently for {sleep_duration} + {jitter} seconds")
         time.sleep(sleep_duration + jitter)
         log.item(f"Periodic browser restart at {datetime.now().strftime('%H:%M:%S')}")
-        browser.kill()
+        p.browser.kill()
         time.sleep(1)
-        browser = start_browser(kiosk_baseurl, kioskname)
+        start_browser(p.kiosk_baseurl, kioskname)
 
 
-# ---------------------------
-# Start 3 threads
-# ---------------------------
 if __name__ == "__main__":
+
+    # Rotate logs
     log.rotate_logs()
     log.item(f"Kiosk starting with loglevel {log.LogLevel}")
     if os.path.exists("/home/pi/restarttimes.txt"):
@@ -418,12 +309,14 @@ if __name__ == "__main__":
                     log.item(f" -> Loaded target time: {clean_line}")
                 except ValueError:
                     print(f" [Error] Skipping invalid format line: '{line.strip()}'")
-    if browserrestarttimes == []:
+
+    # Get restart times if set
+    if not browserrestarttimes:
         log.item(f"No browser periodic restart")
     else:
-        log.item(f"Browser retart times: {browserrestarttimes}")
+        log.item(f"Browser restart times: {browserrestarttimes}")
 
-
+    # Get pi information
     try:
         # Read the raw model name from the system's devicetree
         with open('/proc/device-tree/model', 'r') as f:
@@ -443,46 +336,42 @@ if __name__ == "__main__":
         log.item(f"Suppress gpu: {extrachromeflags}")
     else:
         extrachromeflags = []
-    dev, ui = GrabTouchScreen()
-    brightnessmgr = pb.BrightnessManager(15)
-    pb.issuebrowsercontrol = sendbrowsercontrol
-    threading.Thread(target=mqtt_thread, daemon=True).start()
+
+    # Lock the touchscreen to prevent browser from using it directly
+    device, virtualtouch = GrabTouchScreen()
+
+    # Set up mqtt and brightness managers
+    mh.mq = mh.mqtt_handler(nodename, locationgp, HA_ID, kioskbaseurlentity)
+    pb.bm = pb.BrightnessManager(15, mh.mq.sendbrowsercontrol)
+    threading.Thread(target=mh.mq.mqtt_thread, daemon=True).start()
     log.item('Started MQTT handler')
-    publish.single(f"{TOPIC_HAIP}-req", HAIP, hostname=MQTT_HOST)
-    msgwait = -1
-    while HAIP == "0.0.0.0":
-        if msgwait  <0:
-            log.item("Waiting HA IP - rerequesting")
-            publish.single(f"{TOPIC_HAIP}-req", HAIP, hostname=MQTT_HOST)
-            msgwait = 30
-        else:
-            msgwait -= 1
-        time.sleep(1)
-    if browserrestarttimes != []:
+
+    mh.mq.get_HAIP()
+
+    if browserrestarttimes:
         log.item("Start Browser Restart Thread")
         threading.Thread(target=periodic_browser_restart, args=(browserrestarttimes,)).start()
 
-    if kiosk_baseurl is None: # haven't set up this kiosk in HA yet else retained MQTT message would have set this
+    if p.kiosk_baseurl is None:
+    # haven't set up this kiosk in HA yet else retained MQTT message would have set this
         log.item('Initializing kiosk in HA')
         discovery_payload = {
             "name": f"{nodename} Baseurl",
             "unique_id": f"uid_{kioskbaseurlentity}",
-            "state_topic": STATE_TOPIC,
-            "command_topic": COMMAND_TOPIC,  # <--- Tells HA where to send UI changes
+            "state_topic": mh.mq.STATE_TOPIC,
+            "command_topic": mh.mq.COMMAND_TOPIC,  # <--- Tells HA where to send UI changes
             "command_template": "{{ value }}",  # Sends just the raw string to the broker
             "min": 1,
             "max": 100,
             "icon": "mdi:text-box-edit",
             "mode": "text"
         }
-        publish.single(DISCOVERY_TOPIC, json.dumps(discovery_payload), hostname=MQTT_HOST, retain=True)
-        # now wait for user to set topic in HA
-        publish.single(STATE_TOPIC, kiosk_baseurl, hostname=MQTT_HOST, retain=True)
-        #publish.single(COMMAND_TOPIC, kiosk_baseurl, hostname=MQTT_HOST, retain=True)
+        mh.mq.publish_discovery(discovery_payload)
+        mh.mq.publish_state(p.kiosk_baseurl)
         time.sleep(1)
     else:
-        log.item(f'HA baseurl already set as {kiosk_baseurl}')
+        log.item(f'HA baseurl already set as {p.kiosk_baseurl}')
 
-    log.item(f"Kiosk dashboard passed to start browser: {kiosk_baseurl},{kioskname}")
-    browser = start_browser(kiosk_baseurl, kioskname)
-    touch_thread(dev, ui)
+    log.item(f"Kiosk dashboard passed to start browser: {p.kiosk_baseurl},{kioskname} with prefix {p.HAIP}")
+    start_browser(p.kiosk_baseurl, kioskname)
+    touch_thread(device, virtualtouch)
