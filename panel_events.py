@@ -135,7 +135,7 @@ def periodic_browser_restart(timelist):
         time.sleep(sleep_duration + jitter)
         log.item(f"Periodic browser restart at {datetime.now().strftime('%H:%M:%S')}")
         p.browser.kill()
-        time.sleep(1)
+        time.sleep(5)
         start_browser(p.kiosk_baseurl, kioskname)
 
 

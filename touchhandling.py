@@ -67,7 +67,7 @@ def touch_thread(dev, ui):
     last_tap_time = 0
 
     # Thresholds
-    SWIPE_DIST = 100  # pixels
+    SWIPE_DIST = 200  # pixels
     TAP_MAX_TIME = 0.3  # seconds for a tap
     DOUBLE_TAP_WINDOW = 0.4  # seconds between taps
 
