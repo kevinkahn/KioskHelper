@@ -31,12 +31,14 @@ class mqtt_handler:
         self.BRIGHTNESS_TOPICS = [self.TOPIC_SCREENLEVEL, self.TOPIC_GP_SCREENLEVEL, self.TOPIC_ALL_SCREENLEVEL]
 
         self.nodename = nodename
+        self.lastmessagetime = time.time()
 
 
     def on_message(self, client, userdata, msg):
         try:
             topic = msg.topic
-            log.item(f'[on_message] Topic: {topic} {msg.payload.decode()}')
+            log.item(f'[on_message] Topic: {topic} {msg.payload.decode()} (since last: {time.time()-self.lastmessagetime})')
+            self.lastmessagetime = time.time()
             if topic in self.BRIGHTNESS_TOPICS:
                 rawvalue = msg.payload.decode()
                 value = [item.strip() for item in rawvalue.strip().split(',')]
