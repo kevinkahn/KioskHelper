@@ -37,7 +37,7 @@ class mqtt_handler:
     def on_message(self, client, userdata, msg):
         try:
             topic = msg.topic
-            log.item(f'[on_message] Topic: {topic} {msg.payload.decode()} (since last: {time.time()-self.lastmessagetime})')
+            log.item(f'[on_message] Topic: {topic} {msg.payload.decode()} (since last: {(time.time()-self.lastmessagetime):.2f})')
             self.lastmessagetime = time.time()
             if topic in self.BRIGHTNESS_TOPICS:
                 rawvalue = msg.payload.decode()

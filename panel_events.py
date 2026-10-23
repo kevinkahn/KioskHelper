@@ -251,6 +251,7 @@ if __name__ == "__main__":
     log.item(f"Kiosk dashboard passed to start browser: {p.kiosk_baseurl},{kioskname} with prefix {p.HAIP}")
     start_browser(p.kiosk_baseurl, kioskname)
 
+    log.item(f'Start mqtt watcher thread: {mqttthread.name}')
     watcher = threading.Thread(target=monitor_thread, args=(mqttthread,), daemon=True)
     watcher.start()
 
