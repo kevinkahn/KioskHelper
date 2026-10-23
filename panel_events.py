@@ -59,16 +59,17 @@ def handle_sigterm(signum, frame):
 signal.signal(signal.SIGTERM, handle_sigterm)
 
 def monitor_thread(target_thread, check_interval=5):
-  while True:
-    target_thread.join(timeout=check_interval)
-    if time.time() - mh.mq.lastmessagetime > 64800: # 18 hours
-        log.item(f'MQTT Quiet for 18 hours!')
-        mh.mq.lastmessagetime = time.time()
-    if not target_thread.is_alive():
-        # Trigger your alert here
-        log.item(f"[ALERT] The MQTT thread has unexpectedly terminated!")
-        break
-  sys.exit(99)
+    log.item(f"Monitoring {target_thread.name} thread with check interval: {check_interval}")
+    while True:
+        target_thread.join(timeout=check_interval)
+        if time.time() - mh.mq.lastmessagetime > 64800: # 18 hours
+            log.item(f'MQTT Quiet for 18 hours!')
+            mh.mq.lastmessagetime = time.time()
+        if not target_thread.is_alive():
+            # Trigger your alert here
+            log.item(f"[ALERT] The MQTT thread has unexpectedly terminated!")
+            break
+    sys.exit(99)
 
 def initialize_browser_environment(profile_dir, kiosknm):
     initurl = f"{p.HAIP}/lovelace/0?BrowserID={kiosknm}"
