@@ -58,6 +58,15 @@ def handle_sigterm(signum, frame):
     sys.exit(0)
 signal.signal(signal.SIGTERM, handle_sigterm)
 
+def monitor_thread(target_thread, check_interval=5):
+  while True:
+    target_thread.join(timeout=check_interval)
+    if not target_thread.is_alive():
+      # Trigger your alert here
+      log.item(f"[ALERT] The MQTT thread has unexpectedly terminated!")
+      break
+  sys.exit(99)
+
 def initialize_browser_environment(profile_dir, kiosknm):
     initurl = f"{p.HAIP}/lovelace/0?BrowserID={kiosknm}"
     log.item(f"[initialize_browser_environment] Initializing {initurl}" )
@@ -140,6 +149,9 @@ def periodic_browser_restart(timelist):
 
 
 if __name__ == "__main__":
+    # Fix access issue
+    subprocess.run(["sudo", "chgrp", "input", "/dev/uinput"])
+    subprocess.run(["sudo", "chmod", "g+rw", "/dev/uinput"])
 
     # Rotate logs
     log.rotate_logs()
@@ -192,7 +204,8 @@ if __name__ == "__main__":
     # Set up mqtt and brightness managers
     mh.mq = mh.mqtt_handler(nodename, locationgp, HA_ID, kioskbaseurlentity)
     pb.bm = pb.BrightnessManager(15, mh.mq.sendbrowsercontrol)
-    threading.Thread(target=mh.mq.mqtt_thread, daemon=True).start()
+    mqttthread:threading.Thread = threading.Thread(target=mh.mq.mqtt_thread, daemon=True)
+    mqttthread.start()
     log.item('Started MQTT handler')
 
     mh.mq.get_HAIP()
@@ -233,4 +246,8 @@ if __name__ == "__main__":
 
     log.item(f"Kiosk dashboard passed to start browser: {p.kiosk_baseurl},{kioskname} with prefix {p.HAIP}")
     start_browser(p.kiosk_baseurl, kioskname)
+
+    watcher = threading.Thread(target=monitor_thread, args=(mqttthread,), daemon=True)
+    watcher.start()
+
     th.touch_thread(device, virtualtouch)

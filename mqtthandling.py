@@ -133,5 +133,6 @@ class mqtt_handler:
         log.item("Subscribed to all topics")
         client.on_message = self.on_message
         client.loop_forever()
+        log.item('MQTT Thread Exiting')
 
 mq: mqtt_handler | None = None
