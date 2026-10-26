@@ -1,15 +1,17 @@
 import kiosklog as log
 from jeepney import DBusAddress, new_method_call
-from jeepney.io.blocking import open_dbus_connection
-from jeepney.wrappers import unwrap_msg  # Import the unwrapper
-connection = None
-notifications = None
+from jeepney.io.blocking import open_dbus_connection, DBusConnection
+# noinspection protected-member
+from jeepney.wrappers import unwrap_msg
+
+connection: DBusConnection
+notifications: DBusAddress
 last_id = None
 # Define the standard freedesktop Notification interface
 def notify(msg):
     global connection, notifications, last_id
 
-    if last_id != None:
+    if last_id is not None:
         clear(last_id)
         last_id = None
 
@@ -45,11 +47,11 @@ def notify(msg):
     # Unwrap the message object to get the tuple containing the integer ID
     last_id = unwrap_msg(reply_msg)[0]
 
-def clear(id=None):
+def clear(targid=None):
     global last_id
-    if id != None:
-        useid = id
-    elif last_id != None:
+    if targid is not None:
+        useid = targid
+    elif last_id is not None:
         useid = last_id
     else:
         log.item("Called to clear notification with no id")

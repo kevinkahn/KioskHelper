@@ -98,4 +98,4 @@ class BrightnessManager:
             self.timer.daemon = True
             self.timer.start()
 
-bm: BrightnessManager | None = None
+bm: BrightnessManager

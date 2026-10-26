@@ -34,7 +34,7 @@ class mqtt_handler:
         self.lastmessagetime = time.time()
 
 
-    def on_message(self, client, userdata, msg):
+    def on_message(self, _client, _userdata, msg):
         try:
             topic = msg.topic
             log.item(f'[on_message] Topic: {topic} {msg.payload.decode()} (since last: {(time.time()-self.lastmessagetime):.2f})')
@@ -137,4 +137,4 @@ class mqtt_handler:
         client.loop_forever()
         log.item('MQTT Thread Exiting')
 
-mq: mqtt_handler | None = None
+mq: mqtt_handler

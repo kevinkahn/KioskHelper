@@ -4,9 +4,10 @@ import glob, os, time
 import panelbrightness as pb
 import mqtthandling as mh
 import parameters as p
+from typing import Callable
 
 resetcorner = ((0,0),(0,0))
-restart_browser = None
+restart_browser:Callable[[str,str],None]
 kioskname = ''
 
 def find_touchscreen_event():
@@ -75,9 +76,12 @@ def touch_thread(dev, ui):
         if event.type == ecodes.EV_ABS:
             absevent = categorize(event)
             log.item(f"absevent: {absevent}", level=3)
+            # noinspection PyUnresolvedReferences
             if absevent.event.code in (ecodes.ABS_X, ecodes.ABS_MT_POSITION_X):
+                # noinspection PyUnresolvedReferences
                 current_x = absevent.event.value
             elif absevent.event.code in (ecodes.ABS_Y, ecodes.ABS_MT_POSITION_Y):
+                # noinspection PyUnresolvedReferences
                 current_y = absevent.event.value
 
         elif event.type == ecodes.EV_KEY and event.code == ecodes.BTN_TOUCH:

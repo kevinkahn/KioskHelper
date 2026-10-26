@@ -46,7 +46,7 @@ HA_ID = ('error', 'HASS', 'HASSpga')[localnetcode]
 log.item(f"Using local network: {localnetcode} Local group: {locationgp} HA Name: {HA_ID}")
 
 
-def handle_sigterm(signum, frame):
+def handle_sigterm(signum, _frame):
     """Callback function triggered when SIGTERM is received."""
     log.item(f"Received SIGTERM (signal {signum}). Cleaning up resources...")
     try:
