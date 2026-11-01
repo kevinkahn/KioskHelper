@@ -1,5 +1,5 @@
 #/usr/bin/env python3
-
+import json
 import subprocess
 import threading
 from random import randint
@@ -99,8 +99,8 @@ def initialize_browser_environment(profile_dir, kiosknm):
 
 
 def start_browser(burl, kiosknm):
-    log.item(f"[start_browser] Starting {p.HAIP}" )
     url = f"{p.HAIP}{burl}"
+    log.item(f"[start_browser] Starting {url}" )
     profile_dir = "/home/pi/.config/chromium-kioskscreen"
     profilepath = Path(profile_dir)
     if not profilepath.is_dir():
@@ -149,7 +149,7 @@ def periodic_browser_restart(timelist):
         log.item(f"Periodic browser restart at {datetime.now().strftime('%H:%M:%S')}")
         p.browser.kill()
         time.sleep(5)
-        start_browser(p.kiosk_baseurl, kioskname)
+        start_browser(p.kiosk_reduced_baseurl, kioskname)
 
 
 if __name__ == "__main__":
@@ -196,7 +196,7 @@ if __name__ == "__main__":
         model = 4
         log.item(f"Error getting model {raw_model}")
     log.item(f"Raspberry Pi model: {model}")
-    if model == "3 Model B Plus":
+    if model in  ("3 Model B Plus", "3 Model B"):
         extrachromeflags = ["--disable-gpu", "--disable-software-rasterizer"]
         log.item(f"Suppress gpu: {extrachromeflags}")
     else:
@@ -229,11 +229,19 @@ if __name__ == "__main__":
             "state_topic": mh.mq.STATE_TOPIC,
             "command_topic": mh.mq.COMMAND_TOPIC,  # <--- Tells HA where to send UI changes
             "command_template": "{{ value }}",  # Sends just the raw string to the broker
-            "min": 1,
-            "max": 100,
             "icon": "mdi:text-box-edit",
             "mode": "text"
         }
+        #discovery_payload = {
+        #    "name": "rpi_pgakck5_baseurl",
+        #    "unique_id": "rpi_pgakck5_baseurl_text",
+        #    "state_topic": "HASSpgaw/text/rpi_pgakck5_baseurl/state",
+        #    "command_topic": "HASSpgaw/text/rpi_pgakck5_baseurl/set",
+        #    #"command_retain": True,  # <-- Capital T in Python
+        #    "mode": "text"
+        #}
+        #payload = json.dumps(discovery_payload)
+        #log.item(f"Dump as: {discovery_payload}")
         mh.mq.publish_discovery(discovery_payload)
         log.item(f"Set value for {nodename} Baseurl in Home Assistant")
         notify(f"Set value for text.{nodename.replace('-','_')}_baseurl")
@@ -242,6 +250,7 @@ if __name__ == "__main__":
             time.sleep(30)
             waittime +=30
             notify(f"Still waiting {waittime} for text.{nodename.replace('-','_')}_baseurl")
+            log.item(f'Still waiting {waittime} for text.{nodename.replace('-','_')}_baseurl')
         clear()
         mh.mq.publish_state(p.kiosk_baseurl)
         time.sleep(1)
@@ -249,7 +258,7 @@ if __name__ == "__main__":
         log.item(f'HA baseurl already set as {p.kiosk_baseurl}')
 
     log.item(f"Kiosk dashboard passed to start browser: {p.kiosk_baseurl},{kioskname} with prefix {p.HAIP}")
-    start_browser(p.kiosk_baseurl, kioskname)
+    start_browser(p.kiosk_reduced_baseurl, kioskname)
 
     log.item(f'Start mqtt watcher thread: {mqttthread.name}')
     watcher = threading.Thread(target=monitor_thread, args=(mqttthread,), daemon=True)

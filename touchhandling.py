@@ -93,6 +93,7 @@ def touch_thread(dev, ui):
                     pb.bm.wake_screen()
                     swallow_gesture = 'yes'
                     log.item(f"Swallow this gesture {categorize(event)}",level=3)
+
                 start_x = current_x if 'current_x' in locals() else 0
                 start_y = current_y if 'current_y' in locals() else 0
                 start_time = time.time()
@@ -143,10 +144,12 @@ def touch_thread(dev, ui):
                             log.item("Kill existing browser")
                             p.browser.kill()
                             time.sleep(1)
-                            restart_browser(p.kiosk_baseurl, kioskname)
+                            restart_browser(p.kiosk_reduced_baseurl, kioskname)
                         tap_count = 0
                     elif tap_count == 1:
                         log.item(f"Single tap detected at {current_x}, {current_y}", level=1)
+                        log.item("Start a timer to return to base url")
+                        pb.bm.returntobaseurltimer()
         if swallow_gesture == 'no':
             log.item(f"Reflect event {categorize(event)}",level=3)
             ui.write_event(event)

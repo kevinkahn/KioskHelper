@@ -75,12 +75,13 @@ class mqtt_handler:
                     log.item(f"[loglevel] Set loglevel to {value[1]}")
                 else:
                     log.item(f"[on_message] Unknown MQTT command: {topic}:  {value}")
-            elif topic == self.STATE_TOPIC:
+            elif topic in (self.STATE_TOPIC, self.COMMAND_TOPIC):
                 value = msg.payload.decode()
                 log.item(f"[on_message] State Topic: {topic}  {value}")
                 # normalize to ip number so as not to confuse browser local storage
-                p.kiosk_baseurl = f"{value.partition("8123")[2]}"
-                log.item(f"[on_message] Base url: {p.kiosk_baseurl}")
+                p.kiosk_baseurl = f"{value}"
+                p.kiosk_reduced_baseurl = f"{p.kiosk_baseurl.partition("8123")[2]}"
+                log.item(f"[on_message] Base url: {p.kiosk_baseurl} normalized to {p.kiosk_reduced_baseurl}")
             elif topic == self.TOPIC_HAIP:
                 p.HAIP = msg.payload.decode()
                 log.item(f"[on_message] TOPIC_HAIP Home Assistant IP: {p.HAIP}")
@@ -130,6 +131,8 @@ class mqtt_handler:
             client.subscribe(topic)
         log.item(f"Subscribe to topic: {self.STATE_TOPIC}")
         client.subscribe(self.STATE_TOPIC)
+        log.item(f"Subscribe to topic: {self.COMMAND_TOPIC}")
+        client.subscribe(self.COMMAND_TOPIC)
         log.item(f"Subscribe to topic: {self.TOPIC_HAIP}")
         client.subscribe(self.TOPIC_HAIP)
         log.item("Subscribed to all topics")

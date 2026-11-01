@@ -6,6 +6,10 @@ sudo usermod -a -G sudo pi
 mkdir -p ~/bin
 mkdir -p ~/.config/systemd/user
 cd kiosk
+mv klog krestart ~/bin
+chmod +x ~/bin/*
+echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
 mv panel.service ~/.config/systemd/user
 chmod +x panel_events.py
 python3 -m venv /home/pi/kiosk/venv

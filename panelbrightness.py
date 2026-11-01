@@ -5,12 +5,14 @@ import kiosklog as log
 class BrightnessManager:
     def __init__(self, timeout=10, issuebrowsercontrol=None):
         self.timer = None
+        self.returntimer = None
         self.lock = threading.Lock()
         self.actualscreenlevel = 100
         self.touchesactive = False
         self.idlescreenlevel = 100
         self.activescreenlevel = 100
         self.screenreturntodim = timeout
+        self.timeoutreturntobase = 15
         self.set_brightness(self.idlescreenlevel)
         self.screenisdim = (self.activescreenlevel != self.actualscreenlevel)
         self.issuebrowsercontrol = issuebrowsercontrol
@@ -70,10 +72,23 @@ class BrightnessManager:
             log.item(f"Restore to {self.idlescreenlevel}")
             self.set_brightness(self.idlescreenlevel)
             self.screenisdim = (self.activescreenlevel != self.actualscreenlevel)
-            if self.issuebrowsercontrol is not None:
-                self.issuebrowsercontrol('gotourl')
             self.timer = None
             self.touchesactive = False
+
+    def returntobase(self):
+        log.item(f"Return to base url")
+        if self.issuebrowsercontrol is not None:
+            self.issuebrowsercontrol('gotourl')
+
+    def returntobaseurltimer(self):
+        with self.lock:
+            if self.returntimer is not None:
+                log.item("Reset return to base timer")
+                self.returntimer.cancel()
+            self.returntimer = threading.Timer(self.timeoutreturntobase, self.returntobase)
+            self.returntimer.daemon = True
+            self.returntimer.start()
+
 
     def wake_screen(self):
         with self.lock:
