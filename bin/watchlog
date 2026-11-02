@@ -1,1 +1,1 @@
-tail -F ~/log/txt
+tail -F ~/log.txt
