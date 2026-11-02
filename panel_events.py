@@ -110,11 +110,16 @@ def start_browser(burl, kiosknm):
         "/usr/lib/chromium/chromium",
         "--kiosk",
         "--no-first-run",
+        "--ozone-platform=wayland",
+        "--enable-features=UseOzonePlatform,WaylandWindowMode",
+        "--disable-features=TouchEndPassiveEventsByDefault",
         "--hide-scrollbars",
         "--disable-smooth-scrolling",
         "--no-default-browser-check",
         "--noerrdialogs",
         "--disable-infobars",
+        "--gpu-no-context-lost",
+        "--disable-gpu-vsync=false",
         "--password-store=basic",
         "--user-data-dir=/home/pi/.config/chromium-kioskscreen"] +
         extrachromeflags + [f"{url}?BrowserID={kiosknm}"] )
@@ -198,8 +203,12 @@ if __name__ == "__main__":
     log.item(f"Raspberry Pi model: {model}")
     if model in  ("3 Model B Plus", "3 Model B"):
         extrachromeflags = [ "--disable-low-res-tiling","--enable-low-end-device-mode",
-                            "--disable-composited-antialiasing","--ignore-certificate-errors","--ignore-gpu-blocklist",
-                            "--enable-oop-rasterization","--disable-background-networking","--disable-component-update"]
+                            "--disable-composited-antialiasing","--ignore-certificate-errors","--ignore-gpu-blocklist","--enable-gpu-rasterization",
+                            "--enable-oop-rasterization","--disable-background-networking","--disable-component-update",
+                            "--animation-duration-scale=0","--wm-window-animations-disabled","--disable-gpu-memory-buffer-video-frames",
+                            "--disable-software-compositing-surface","--target-by-page-scale-factor", "--max-gum-fps=30",
+                            "--disable-gpu-vsync=false","--disable-frame-rate-limit","--disable-threaded-animation","--disable-threaded-scrolling",
+                            "--max-gum-fps=30"]
         log.item(f"Suppress gpu: {extrachromeflags}")
     else:
         extrachromeflags = []
