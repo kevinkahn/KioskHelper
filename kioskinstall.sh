@@ -6,7 +6,7 @@ sudo usermod -a -G sudo pi
 mkdir -p ~/bin
 mkdir -p ~/.config/systemd/user
 cd kiosk
-mv klog krestart ~/bin
+mv bin/* ~/bin
 chmod +x ~/bin/*
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
@@ -20,21 +20,59 @@ pip install jeepney
 sudo apt update && sudo apt install mako-notifier libnotify-bin
 systemctl --user daemon-reload
 systemctl --user enable panel.service
-systemctl --user start panel.service
+#systemctl --user start panel.service
 loginctl enable-linger pi
 sudo apt install wtype
 cd ~
-cd .config/labwc
-echo "sleep 1 && wtype -M logo -k h -m logo &" > autostart
-echo "<labwc_config>
-  <keyboard>
-    <keybind key="W-h">
-      <action name="HideCursor"/>
-      <action name="WarpCursor" to="output" x="1" y="1"/>
-    </keybind>
-  </keyboard>
-</labwc_config>
-" >> rc.xml
+# ==============================================================================
+# OPTIMIZATION BLOCK: Configure 2GB Zram for Raspberry Pi 3B / 3B+ (Non-Root Safe)
+# ==============================================================================
+if [ -f /proc/device-tree/model ]; then
+    PI_MODEL=$(tr -d '\0' < /proc/device-tree/model)
+
+    if [[ "$PI_MODEL" =~ "Raspberry Pi 3 Model B" ]]; then
+        echo "[+] Target identified as Raspberry Pi 3B/3B+."
+        echo "[*] Setting up 2GB zram swap space optimization for Chromium..."
+
+        # 1. Create the system directory safely using sudo
+        sudo mkdir -p /etc/rpi/swap.conf.d
+
+        # 2. Write the configuration file using sudo tee (avoids permission errors with redirections)
+        cat << 'EOF' | sudo tee /etc/rpi/swap.conf.d/80-increase-zram.conf > /dev/null
+[Zram]
+Mechanism=zram
+FixedSizeMiB=2048
+MaxSizeMiB=2048
+EOF
+
+        # 3. Clean out legacy config files using sudo
+        if [ -f /etc/systemd/zram-generator.conf ]; then
+            sudo rm -f /etc/systemd/zram-generator.conf
+        fi
+
+        # 4. Force systemd to reload its layout generators using sudo
+        sudo systemctl daemon-reload
+
+        echo "[+] Zram optimization complete. (Will take effect after the next reboot)"
+    else
+        echo "[*] Skipping Zram optimization: Target hardware is not a Pi 3B/3B+ ($PI_MODEL)."
+    fi
+else
+    echo "[-] Skipping Zram optimization: Cannot determine hardware model (missing device-tree layout)."
+fi
+# ==============================================================================
+
+#cd .config/labwc
+#echo "sleep 1 && wtype -M logo -k h -m logo &" > autostart
+#echo "<labwc_config>
+#  <keyboard>
+#    <keybind key="W-h">
+#      <action name="HideCursor"/>
+#      <action name="WarpCursor" to="output" x="1" y="1"/>
+#    </keybind>
+#  </keyboard>
+#</labwc_config>
+#" >> rc.xml
 echo 'KERNEL=="uinput", SUBSYSTEM=="misc", OPTIONS+="static_node=uinput", TAG+="uaccess", GROUP="input", MODE="0660"' | sudo tee /etc/udev/rules.d/99-uinput.rules
 echo 'ATTRS{name}=="Filtered Touchscreen Flipped", ENV{LIBINPUT_CALIBRATION_MATRIX}="-1 0 1 0 -1 1 0 0 1"' | sudo tee /etc/udev/rules.d/99-virtual-touchscreen.rules
 echo "On pi desktop open browser with:"
@@ -42,6 +80,7 @@ echo "/usr/lib/chromium/chromium --user-deta-dir=/home/pi/.config/chromium-kiosk
 echo "log in as kioskscreen, a"
 echo "Open browser_mod from side panel and set the browser id in the name box"
 echo 'If need to invert touch screen: touch fliptouch in home dir'
+echo "Do a reboot to reset the swap and then log into the browser"
 
 
 

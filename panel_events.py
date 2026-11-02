@@ -111,6 +111,7 @@ def start_browser(burl, kiosknm):
         "--kiosk",
         "--no-first-run",
         "--hide-scrollbars",
+        "--disable-smooth-scrolling",
         "--no-default-browser-check",
         "--noerrdialogs",
         "--disable-infobars",
@@ -196,7 +197,9 @@ if __name__ == "__main__":
         log.item(f"Error getting model {raw_model}")
     log.item(f"Raspberry Pi model: {model}")
     if model in  ("3 Model B Plus", "3 Model B"):
-        extrachromeflags = ["--disable-gpu", "--disable-software-rasterizer"]
+        extrachromeflags = [ "--disable-low-res-tiling","--enable-low-end-device-mode",
+                            "--disable-composited-antialiasing","--ignore-certificate-errors","--ignore-gpu-blocklist",
+                            "--enable-oop-rasterization","--disable-background-networking","--disable-component-update"]
         log.item(f"Suppress gpu: {extrachromeflags}")
     else:
         extrachromeflags = []
