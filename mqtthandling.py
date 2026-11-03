@@ -75,7 +75,7 @@ class mqtt_handler:
                     log.item(f"[loglevel] Set loglevel to {value[1]}")
                 else:
                     log.item(f"[on_message] Unknown MQTT command: {topic}:  {value}")
-            elif topic in (self.STATE_TOPIC, self.COMMAND_TOPIC):
+            elif topic == self.STATE_TOPIC:
                 value = msg.payload.decode()
                 log.item(f"[on_message] State Topic: {topic}  {value}")
                 # normalize to ip number so as not to confuse browser local storage

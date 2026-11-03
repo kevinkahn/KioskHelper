@@ -1,4 +1,5 @@
 #/usr/bin/env python3
+import json
 import subprocess
 import threading
 from random import randint
@@ -110,9 +111,6 @@ def start_browser(burl, kiosknm):
         "/usr/lib/chromium/chromium",
         "--kiosk",
         "--no-first-run",
-        "--ozone-platform=wayland",
-        "--enable-features=UseOzonePlatform,WaylandWindowMode",
-        "--disable-features=TouchEndPassiveEventsByDefault",
         "--hide-scrollbars",
         "--disable-smooth-scrolling",
         "--no-default-browser-check",
@@ -203,12 +201,10 @@ if __name__ == "__main__":
     log.item(f"Raspberry Pi model: {model}")
     if model in  ("3 Model B Plus", "3 Model B"):
         extrachromeflags = [ "--disable-low-res-tiling","--enable-low-end-device-mode",
-                            "--disable-composited-antialiasing","--ignore-certificate-errors","--ignore-gpu-blocklist","--enable-gpu-rasterization",
+                            "--disable-composited-antialiasing",
                             "--enable-oop-rasterization","--disable-background-networking","--disable-component-update",
-                            "--animation-duration-scale=0","--wm-window-animations-disabled","--disable-gpu-memory-buffer-video-frames",
-                            "--disable-software-compositing-surface","--target-by-page-scale-factor", "--max-gum-fps=30",
-                            "--disable-gpu-vsync=false","--disable-frame-rate-limit","--disable-threaded-animation","--disable-threaded-scrolling",
-                            "--max-gum-fps=30"]
+                            "--animation-duration-scale=0","--wm-window-animations-disabled",
+                            "--disable-software-compositing-surface","--disable-gpu-vsync=false"]
         log.item(f"Suppress gpu: {extrachromeflags}")
     else:
         extrachromeflags = []
@@ -240,19 +236,11 @@ if __name__ == "__main__":
             "state_topic": mh.mq.STATE_TOPIC,
             "command_topic": mh.mq.COMMAND_TOPIC,  # <--- Tells HA where to send UI changes
             "command_template": "{{ value }}",  # Sends just the raw string to the broker
-            "icon": "mdi:text-box-edit",
+            "retain": True,
             "mode": "text"
         }
-        #discovery_payload = {
-        #    "name": "rpi_pgakck5_baseurl",
-        #    "unique_id": "rpi_pgakck5_baseurl_text",
-        #    "state_topic": "HASSpgaw/text/rpi_pgakck5_baseurl/state",
-        #    "command_topic": "HASSpgaw/text/rpi_pgakck5_baseurl/set",
-        #    #"command_retain": True,  # <-- Capital T in Python
-        #    "mode": "text"
-        #}
-        #payload = json.dumps(discovery_payload)
-        #log.item(f"Dump as: {discovery_payload}")
+        payload = json.dumps(discovery_payload)
+        log.item(f"Dump as: {discovery_payload}")
         mh.mq.publish_discovery(discovery_payload)
         log.item(f"Set value for {nodename} Baseurl in Home Assistant")
         notify(f"Set value for text.{nodename.replace('-','_')}_baseurl")
