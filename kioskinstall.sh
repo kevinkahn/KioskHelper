@@ -75,9 +75,10 @@ fi
 #" >> rc.xml
 echo 'KERNEL=="uinput", SUBSYSTEM=="misc", OPTIONS+="static_node=uinput", TAG+="uaccess", GROUP="input", MODE="0660"' | sudo tee /etc/udev/rules.d/99-uinput.rules
 echo 'ATTRS{name}=="Filtered Touchscreen Flipped", ENV{LIBINPUT_CALIBRATION_MATRIX}="-1 0 1 0 -1 1 0 0 1"' | sudo tee /etc/udev/rules.d/99-virtual-touchscreen.rules
-echo "On pi desktop open browser with:"
+echo "source .bashrc to get bin in path"
+echo "As a backup:"
 echo "/usr/lib/chromium/chromium --user-deta-dir=/home/pi/.config/chromium-kioskscreen 192.168.1.15:8123?browser_ID=kiosk_dev7x"
-echo "log in as kioskscreen, a"
+echo "log in as kioskscreen, a", then exit the browser
 echo "Open browser_mod from side panel and set the browser id in the name box"
 echo 'If need to invert touch screen: touch fliptouch in home dir'
 echo "Do a reboot to reset the swap and then log into the browser"
