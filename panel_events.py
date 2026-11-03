@@ -33,18 +33,6 @@ def get_local_ip_gp():
     return int(ip.split('.')[2])
 
 browser: subprocess.Popen | None = None
-localnetcode = get_local_ip_gp()
-browserrestarttimes = []
-# Node name is pi dns name
-nodename = os.uname().nodename
-# Kiosk name is the name for the browser in HA
-kioskname = f"kiosk_{nodename.replace('rpi-','')}"
-kioskbaseurlentity = f"{kioskname}_baseurl"
-log.item(f"Kiosk Info: node: {nodename} kioskname: {kioskname} kioskbaseurlentity: {kioskbaseurlentity} kiosk_baseurl: {p.kiosk_baseurl}", level=3)
-locationgp = ('error', 'pdx', 'pgaw')[localnetcode] # user for group browser commands
-HA_ID = ('error', 'HASS', 'HASSpga')[localnetcode]
-log.item(f"Using local network: {localnetcode} Local group: {locationgp} HA Name: {HA_ID}")
-
 
 def handle_sigterm(signum, _frame):
     """Callback function triggered when SIGTERM is received."""
@@ -71,8 +59,8 @@ def monitor_thread(target_thread, check_interval=5):
             break
     sys.exit(99)
 
-def initialize_browser_environment(profile_dir, kiosknm):
-    initurl = f"{p.HAIP}/lovelace/0?BrowserID={kiosknm}"
+def initialize_browser_environment(profile_dir, kiosknm, haip):
+    initurl = f"{haip}/lovelace/0?BrowserID={kiosknm}"
     log.item(f"[initialize_browser_environment] Initializing {initurl}" )
     initbrowser = subprocess.run([
         "/usr/lib/chromium/chromium",
@@ -98,13 +86,13 @@ def initialize_browser_environment(profile_dir, kiosknm):
                 pass
 
 
-def start_browser(burl, kiosknm):
-    url = f"{p.HAIP}{burl}"
-    log.item(f"[start_browser] Starting {url}" )
+def start_browser(burl, kiosknm, haip):
+    url = f"{haip}{burl}"
     profile_dir = "/home/pi/.config/chromium-kioskscreen"
     profilepath = Path(profile_dir)
     if not profilepath.is_dir():
-        initialize_browser_environment(profile_dir, kiosknm)
+        log.item(f"Initializing chromium profile (Dir: {profile_dir}) Kiosk: {kiosknm} IP: {haip}")
+        initialize_browser_environment(profile_dir, kiosknm, haip)
 
     log.item(f"[start_browser] Starting in {url}")
     p.browser = subprocess.Popen([
@@ -142,7 +130,7 @@ def get_seconds_until_next(target_times):
 
     return min(seconds_distances)
 
-def periodic_browser_restart(timelist):
+def periodic_browser_restart(timelist, haip):
     log.item(f"Restart browser at {timelist}")
     while True:
         sleep_duration = (get_seconds_until_next(timelist))
@@ -152,17 +140,37 @@ def periodic_browser_restart(timelist):
         log.item(f"Periodic browser restart at {datetime.now().strftime('%H:%M:%S')}")
         p.browser.kill()
         time.sleep(5)
-        start_browser(p.kiosk_reduced_baseurl, kioskname)
+        start_browser(p.kiosk_reduced_baseurl, kioskname, haip)
 
 
 if __name__ == "__main__":
+
+    # Get kiosk IP and name
+    localnetcode = get_local_ip_gp()
+    nodename = os.uname().nodename
+
+    # Rotate logs
+    log.rotate_logs()
+    log.item("Kiosk Starting")
+
+    # Kiosk name is the name for the browser in HA (strip the rpu-)
+    kioskname = f"kiosk_{nodename.replace('rpi-', '')}"
+    kioskbaseurlentity = f"{kioskname}_baseurl"
+    log.item(
+        f"Kiosk Info: node: {nodename} kioskname: {kioskname} kioskbaseurlentity: {kioskbaseurlentity} kiosk_baseurl: {p.kiosk_baseurl}",
+        level=3)
+
+    locationgp = ('error', 'pdx', 'pgaw')[localnetcode]  # user for group browser commands
+    HA_ID = ('error', 'HASS', 'HASSpga')[localnetcode]
+    log.item(f"Using local network: {localnetcode} Local group: {locationgp} HA Name: {HA_ID}")
+
     # Fix access issue
     subprocess.run(["sudo", "chgrp", "input", "/dev/uinput"])
     subprocess.run(["sudo", "chmod", "g+rw", "/dev/uinput"])
 
-    # Rotate logs
-    log.rotate_logs()
-    log.item(f"Kiosk starting with loglevel {log.LogLevel}")
+    # Check for periodic restarts
+    browserrestarttimes = []
+
     if os.path.exists("/home/pi/restarttimes.txt"):
         with open("/home/pi/restarttimes.txt", "r") as f:
             for line in f:
@@ -177,22 +185,19 @@ if __name__ == "__main__":
                     log.item(f" -> Loaded target time: {clean_line}")
                 except ValueError:
                     print(f" [Error] Skipping invalid format line: '{line.strip()}'")
-
-    # Get restart times if set
     if not browserrestarttimes:
         log.item(f"No browser periodic restart")
     else:
         log.item(f"Browser restart times: {browserrestarttimes}")
 
-    # Get pi information
+
+    # Get pi information for lighter weight browser
     try:
         # Read the raw model name from the system's devicetree
         with open('/proc/device-tree/model', 'r') as f:
             raw_model = f.read().strip('\x00\n ')  # Strip null bytes and newlines
-
         # 1. Remove the "Raspberry Pi" text prefix
         model = raw_model.replace("Raspberry Pi", "").strip()
-
         # 2. Strip trailing hardware revisions (e.g., "Rev 1.2")
         model = re.sub(r'\s+Rev\s+\d+\.\d+', '', model, flags=re.IGNORECASE)
     except FileNotFoundError:
@@ -218,8 +223,10 @@ if __name__ == "__main__":
     mqttthread:threading.Thread = threading.Thread(target=mh.mq.mqtt_thread, daemon=True)
     mqttthread.start()
     log.item('Started MQTT handler')
+    time.sleep(5)  # give things a chance to initialize
 
-    mh.mq.get_HAIP()
+    # Get the IP of the HA instance
+    HAIP = mh.mq.get_HAIP()
 
     th.restart_browser = start_browser
     th.kioskname = kioskname
@@ -236,7 +243,6 @@ if __name__ == "__main__":
             "state_topic": mh.mq.STATE_TOPIC,
             "command_topic": mh.mq.COMMAND_TOPIC,  # <--- Tells HA where to send UI changes
             "command_template": "{{ value }}",  # Sends just the raw string to the broker
-            "retain": True,
             "mode": "text"
         }
         payload = json.dumps(discovery_payload)
@@ -251,13 +257,13 @@ if __name__ == "__main__":
             notify(f"Still waiting {waittime} for text.{nodename.replace('-','_')}_baseurl")
             log.item(f'Still waiting {waittime} for text.{nodename.replace('-','_')}_baseurl')
         clear()
-        mh.mq.publish_state(p.kiosk_baseurl)
+        #mh.mq.publish_state(p.kiosk_baseurl)
         time.sleep(1)
     else:
         log.item(f'HA baseurl already set as {p.kiosk_baseurl}')
 
-    log.item(f"Kiosk dashboard passed to start browser: {p.kiosk_baseurl},{kioskname} with prefix {p.HAIP}")
-    start_browser(p.kiosk_reduced_baseurl, kioskname)
+    log.item(f"Kiosk dashboard passed to start browser: {p.kiosk_reduced_baseurl},{kioskname} with prefix {HAIP}")
+    start_browser(p.kiosk_reduced_baseurl, kioskname, HAIP)
 
     log.item(f'Start mqtt watcher thread: {mqttthread.name}')
     watcher = threading.Thread(target=monitor_thread, args=(mqttthread,), daemon=True)

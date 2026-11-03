@@ -10,6 +10,7 @@ import json
 
 class mqtt_handler:
     def __init__(self, nodename, locationgp, HA_ID, kioskbaseurlentity):
+        self.HAIP = '0.0.0.0'
         self.MQTT_HOST = "mqtt"
 
         self.TOPIC_TOUCH = f"wallpanel/{nodename}/touch"
@@ -82,9 +83,13 @@ class mqtt_handler:
                 p.kiosk_baseurl = f"{value}"
                 p.kiosk_reduced_baseurl = f"{p.kiosk_baseurl.partition("8123")[2]}"
                 log.item(f"[on_message] Base url: {p.kiosk_baseurl} normalized to {p.kiosk_reduced_baseurl}")
+            elif topic == self.COMMAND_TOPIC:
+                value = msg.payload.decode()
+                log.item(f"[on_message] Command Topic: {topic}  {value} will republish to {self.STATE_TOPIC}")
+                publish.single(self.STATE_TOPIC, value, retain=True, hostname=self.MQTT_HOST)
             elif topic == self.TOPIC_HAIP:
-                p.HAIP = msg.payload.decode()
-                log.item(f"[on_message] TOPIC_HAIP Home Assistant IP: {p.HAIP}")
+                self.HAIP = msg.payload.decode()
+                log.item(f"[on_message] TOPIC_HAIP Home Assistant IP: {self.HAIP}")
             else:
                 log.item(f"[on_message] Unknown MQTT topic: {topic} with value: {msg.payload.decode()}")
 
@@ -100,24 +105,24 @@ class mqtt_handler:
         log.item(f"sendbrowsercontrol command: {command}", level=2)
 
     def get_HAIP(self):
-        publish.single(f"{self.TOPIC_HAIP}-req", p.HAIP, hostname=self.MQTT_HOST)
-        msgwait = -1
-        while p.HAIP == "0.0.0.0":
+        publish.single(f"{self.TOPIC_HAIP}-req", self.HAIP, hostname=self.MQTT_HOST)
+        msgwait = 30
+        while self.HAIP == "0.0.0.0":
             if msgwait < 0:
                 log.item("Waiting HA IP - rerequesting")
-                publish.single(f"{self.TOPIC_HAIP}-req", p.HAIP, hostname=self.MQTT_HOST)
+                publish.single(f"{self.TOPIC_HAIP}-req", self.HAIP, hostname=self.MQTT_HOST)
                 msgwait = 30
             else:
                 msgwait -= 1
             time.sleep(1)
-        return
+        return self.HAIP
 
     def publish_discovery(self, discovery_payload):
         log.item(f"Publish discovery message: {discovery_payload}")
         publish.single(self.DISCOVERY_TOPIC, json.dumps(discovery_payload), hostname=self.MQTT_HOST, retain=True)
 
     def publish_state(self, baseurl):
-        log.item(f"Publish state message: {baseurl}")
+        log.item(f"Publish state message: {baseurl} to {self.STATE_TOPIC}")
         publish.single(self.STATE_TOPIC, baseurl, hostname=self.MQTT_HOST, retain=True)
 
     def mqtt_thread(self):

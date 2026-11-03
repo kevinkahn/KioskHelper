@@ -110,12 +110,12 @@ def touch_thread(dev, ui):
                 duration = end_time - start_time
                 end_x = current_x if 'current_x' in locals() else start_x
                 end_y = current_y if 'current_y' in locals() else start_y
-                log.item(f"Touch up: {end_x}, {end_y} {'current_x' in locals()} {'current_y' in locals()}", level=3)
+                log.item(f"Touch up: {end_x}, {end_y} {'current_x' in locals()} {'current_y' in locals()}", level=2)
 
                 dx = end_x - start_x
                 dy = end_y - start_y
                 dist = (dx ** 2 + dy ** 2) ** 0.5
-                log.item(f"Touch pair dist: {dist} dx: {dx} dy: {dy} ")
+                log.item(f"Touch pair dist: {dist} dx: {dx} dy: {dy} ", level=2)
 
                 # Check for Swipe
                 if dist > SWIPE_DIST:
@@ -123,8 +123,8 @@ def touch_thread(dev, ui):
                         direction = "Right" if dx > 0 else "Left"
                     else:
                         direction = "Down" if dy > 0 else "Up"
-                    log.item(f"Swipe detected: {direction}: {dx}, {dy}, {dist}")
-                    log.item(f"Coords: {start_x} {end_x}, {start_y} {end_y}")
+                    log.item(f"Swipe detected: {direction}: {dx}, {dy}, {dist}", level=2)
+                    log.item(f"Coords: {start_x} {end_x}, {start_y} {end_y}", level=2)
                     if direction in ("Down","Up"): mh.mq.sendbrowsercontrol("refresh")
                     if direction in ("Right","Left"): mh.mq.sendbrowsercontrol("maintenance")
                     tap_count = 0
@@ -138,17 +138,16 @@ def touch_thread(dev, ui):
                     last_tap_time = now
 
                     if tap_count == 2:
-                        log.item(f"Double tap detected at {current_x}, {current_y}", level=1)
+                        log.item(f"Double tap detected at {current_x}, {current_y}", level=2)
                         if resetcorner[0][0] <= current_x <= resetcorner[0][1] and resetcorner[1][0] <= current_y <= resetcorner[1][1]:
-                            log.item("Got a screen restart")
-                            log.item("Kill existing browser")
+                            log.item("Got a screen restart; Kill existing browser")
                             p.browser.kill()
                             time.sleep(1)
                             restart_browser(p.kiosk_reduced_baseurl, kioskname)
                         tap_count = 0
                     elif tap_count == 1:
-                        log.item(f"Single tap detected at {current_x}, {current_y}", level=1)
-                        log.item("Start a timer to return to base url")
+                        log.item(f"Single tap detected at {current_x}, {current_y}", level=3)
+                        log.item("Start a timer to return to base url", level=2)
                         pb.bm.returntobaseurltimer()
         if swallow_gesture == 'no':
             log.item(f"Reflect event {categorize(event)}",level=3)

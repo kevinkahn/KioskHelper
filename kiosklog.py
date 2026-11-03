@@ -18,16 +18,17 @@ def item(msg, level = 1):
 
 def rotate_logs():
     global LOG_FILE, LogLevel
+    item("Rotate logs")
     # Remove oldest
     os.chdir('/home/pi')
     oldest = Path(f"{LOG_FILE}.{MAX_LOGS}")
     if oldest.exists():
-        print(f"Discard: {oldest}")
+        item(f"Discard: {oldest}")
         oldest.unlink()
 
     # Shift existing logs up
     for i in range(MAX_LOGS - 1, 0, -1):
-        print(f"Rotating log file: {LOG_FILE}.{i}")
+        item(f"Rotating log file: {LOG_FILE}.{i}")
         src = Path(f"log.txt.{i}")
         dst = Path(f"log.txt.{i + 1}")
         if src.exists():
@@ -37,7 +38,7 @@ def rotate_logs():
 
     # Rotate current log
     if LOG_FILE.exists():
-        print(f"Rotate previous log: {LOG_FILE}")
+        item(f"Rotate previous log: {LOG_FILE}")
         LOG_FILE.rename("log.txt.1")
 
     # initialize log level
@@ -45,4 +46,5 @@ def rotate_logs():
         LogLevel = 2
     if os.path.exists("/home/pi/log3"):
         LogLevel = 3
+    item(f"Kiosk starting with loglevel {LogLevel}")
 
