@@ -98,6 +98,7 @@ def start_browser(burl, kiosknm, haip):
     p.browser = subprocess.Popen([
         "/usr/lib/chromium/chromium",
         "--kiosk",
+        "--nocursor",
         "--no-first-run",
         "--hide-scrollbars",
         "--disable-smooth-scrolling",

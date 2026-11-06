@@ -66,9 +66,10 @@ class mqtt_handler:
                     subprocess.run(["systemctl", "--user", "restart", "panel"])
                 elif value[0] == 'update':
                     log.item("[update] Update kiosk")
-                    subprocess.run(["git", "fetch"], cwd="/home/pi/kiosk")
-                    subprocess.run(["git", "reset", "--hard"], cwd="/home/pi/kiosk")
-                    subprocess.run(["git", "pull"], cwd="/home/pi/kiosk")
+                    with open('log.txt', 'a') as f:
+                        subprocess.run(["git", "fetch"], cwd="/home/pi/kiosk", stdout=f, stderr=subprocess.STDOUT)
+                        subprocess.run(["git", "reset", "--hard"], cwd="/home/pi/kiosk", stdout=f, stderr=subprocess.STDOUT)
+                        subprocess.run(["git", "pull"], cwd="/home/pi/kiosk", stdout=f, stderr=subprocess.STDOUT)
                     log.item("[restart] Restart kiosk")
                     subprocess.run(["systemctl","--user","restart","panel"])
                 elif value[0] == 'loglevel':
