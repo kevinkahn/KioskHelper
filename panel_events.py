@@ -20,17 +20,25 @@ from notification import notify, clear
 
 def get_local_ip_gp():
     # return the local net number for choosing local HA
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-     # Does not have to be reachable to extract the local interface IP
-       s.connect(('8.8.8.8', 1))
-       ip = s.getsockname()[0]
-    except Exception as e:
-        log.item(f"Failed to get local ip address: {e}")
-        ip = '127.0.0.1'
-    finally:
-        s.close()
-    return int(ip.split('.')[2])
+    netnumber = 0
+    while netnumber == 0:
+        time.sleep(3)
+        log.item(f"[get_local_ip_gp] Try getting local ip address")
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+         # Does not have to be reachable to extract the local interface IP
+            s.connect(('8.8.8.8', 1))
+            ip = s.getsockname()[0]
+            log.item(f"Local IP address: {ip}")
+        except Exception as e:
+            log.item(f"Failed to get local ip address: {e}")
+            ip = '127.0.0.1'
+        finally:
+            s.close()
+        netnumber = int(ip.split('.')[2])
+
+    return netnumber
 
 browser: subprocess.Popen | None = None
 
@@ -146,13 +154,14 @@ def periodic_browser_restart(timelist, haip):
 
 if __name__ == "__main__":
 
-    # Get kiosk IP and name
-    localnetcode = get_local_ip_gp()
-    nodename = os.uname().nodename
-
     # Rotate logs
     log.rotate_logs()
     log.item("Kiosk Starting")
+
+    # Get kiosk IP and name
+    localnetcode = get_local_ip_gp()
+    log.item(f"Local ip network: {localnetcode}")
+    nodename = os.uname().nodename
 
     # Kiosk name is the name for the browser in HA (strip the rpu-)
     kioskname = f"kiosk_{nodename.replace('rpi-', '')}"

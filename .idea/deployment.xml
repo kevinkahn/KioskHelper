@@ -31,6 +31,13 @@
           </mappings>
         </serverdata>
       </paths>
+      <paths name="rpi-pgalr">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/pi/kiosk" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
     </serverData>
     <option name="myAutoUpload" value="ALWAYS" />
   </component>

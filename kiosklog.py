@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 
 LOG_FILE = Path("log.txt")
+TMP_LOG = Path('log.txt.tmp')
 MAX_LOGS = 5
 LogLevel = 1
 
@@ -18,6 +19,8 @@ def item(msg, level = 1):
 
 def rotate_logs():
     global LOG_FILE, LogLevel
+    if LOG_FILE.exists():
+        LOG_FILE.rename("log.txt.tmp")
     item("Rotate logs")
     # Remove oldest
     os.chdir('/home/pi')
@@ -37,9 +40,10 @@ def rotate_logs():
             src.rename(dst)
 
     # Rotate current log
-    if LOG_FILE.exists():
+
+    if TMP_LOG.exists():
         item(f"Rotate previous log: {LOG_FILE}")
-        LOG_FILE.rename("log.txt.1")
+        TMP_LOG.rename("log.txt.1")
 
     # initialize log level
     if os.path.exists("/home/pi/log2"):

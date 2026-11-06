@@ -3,7 +3,7 @@
   <component name="WebServers">
     <option name="servers">
       <webServer id="389be93c-0900-47c6-a6c1-c541b8026f66" name="rpi-dev7x">
-        <fileTransfer rootFolder="/home/pi" accessType="SFTP" host="rpi-dev7x" port="22" sshConfigId="c3d58d28-c644-4dec-b150-018b393c6d99" sshConfig="pi@rpi-dev7x:22 password">
+        <fileTransfer rootFolder="/home/pi" accessType="SFTP" host="rpi-pgalr" port="22" sshConfigId="c3d58d28-c644-4dec-b150-018b393c6d99" sshConfig="pi@rpi-pgalr:22 password">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>
@@ -11,6 +11,13 @@
       </webServer>
       <webServer id="e5338a9d-8425-4757-abd9-09756a7164c2" name="rpi-pgakck5.pgawhome">
         <fileTransfer rootFolder="/home/pi" accessType="SFTP" host="rpi-pgakck5.pgawhome" port="22" sshConfigId="be915a56-9703-41da-b1bc-c0b863c95847" sshConfig="pi@rpi-pgakck5.pgawhome:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+      <webServer id="d52e77b4-9eba-4e4c-a410-ef0ad8b0339f" name="rpi-pgalr">
+        <fileTransfer accessType="SFTP" host="rpi-pgalr" port="22" sshConfigId="c3d58d28-c644-4dec-b150-018b393c6d99" sshConfig="pi@rpi-pgalr:22 password">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>
