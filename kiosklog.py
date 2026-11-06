@@ -18,12 +18,14 @@ def item(msg, level = 1):
             f.write(f"[{timestamp}] {msg}\n")
 
 def rotate_logs():
-    global LOG_FILE, LogLevel
+    global LOG_FILE, TMP_LOG, LogLevel
+    os.chdir('/home/pi')
     if LOG_FILE.exists():
         LOG_FILE.rename("log.txt.tmp")
+
     item("Rotate logs")
     # Remove oldest
-    os.chdir('/home/pi')
+
     oldest = Path(f"{LOG_FILE}.{MAX_LOGS}")
     if oldest.exists():
         item(f"Discard: {oldest}")
@@ -44,6 +46,8 @@ def rotate_logs():
     if TMP_LOG.exists():
         item(f"Rotate previous log: {LOG_FILE}")
         TMP_LOG.rename("log.txt.1")
+    else:
+        item("No previous log")
 
     # initialize log level
     if os.path.exists("/home/pi/log2"):
