@@ -265,8 +265,4 @@ if __name__ == "__main__":
     log.item(f"Kiosk dashboard passed to start browser: {p.kiosk_reduced_baseurl},{kioskname} with prefix {HAIP}")
     start_browser(p.kiosk_reduced_baseurl, kioskname, HAIP)
 
-    log.item(f'Start mqtt watcher thread: {mqttthread.name}')
-    watcher = threading.Thread(target=monitor_thread, args=(mqttthread,), daemon=True)
-    watcher.start()
-
     th.touch_thread(device, virtualtouch)

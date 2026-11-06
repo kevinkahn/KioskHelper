@@ -126,23 +126,28 @@ class mqtt_handler:
         publish.single(self.STATE_TOPIC, baseurl, hostname=self.MQTT_HOST, retain=True)
 
     def mqtt_thread(self):
-        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-        client.connect(self.MQTT_HOST)
-        for topic in self.CONTROL_TOPICS:
-            log.item(f"Subscribe to topic: {topic}")
-            client.subscribe(topic)
-        for topic in self.BRIGHTNESS_TOPICS:
-            log.item(f"Subscribe to topic: {topic}")
-            client.subscribe(topic)
-        log.item(f"Subscribe to topic: {self.STATE_TOPIC}")
-        client.subscribe(self.STATE_TOPIC)
-        log.item(f"Subscribe to topic: {self.COMMAND_TOPIC}")
-        client.subscribe(self.COMMAND_TOPIC)
-        log.item(f"Subscribe to topic: {self.TOPIC_HAIP}")
-        client.subscribe(self.TOPIC_HAIP)
-        log.item("Subscribed to all topics")
-        client.on_message = self.on_message
-        client.loop_forever()
-        log.item('MQTT Thread Exiting')
+        while True:
+            try:
+                log.item("Set up MQTT connections")
+                client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+                client.connect(self.MQTT_HOST)
+                for topic in self.CONTROL_TOPICS:
+                    log.item(f"Subscribe to topic: {topic}")
+                    client.subscribe(topic)
+                for topic in self.BRIGHTNESS_TOPICS:
+                    log.item(f"Subscribe to topic: {topic}")
+                    client.subscribe(topic)
+                log.item(f"Subscribe to topic: {self.STATE_TOPIC}")
+                client.subscribe(self.STATE_TOPIC)
+                log.item(f"Subscribe to topic: {self.COMMAND_TOPIC}")
+                client.subscribe(self.COMMAND_TOPIC)
+                log.item(f"Subscribe to topic: {self.TOPIC_HAIP}")
+                client.subscribe(self.TOPIC_HAIP)
+                log.item("Subscribed to all topics")
+                client.on_message = self.on_message
+                client.loop_forever()
+            except Exception as e:
+                log.item(f"MQTT Error {e}")
+
 
 mq: mqtt_handler
