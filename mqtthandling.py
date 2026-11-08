@@ -13,7 +13,6 @@ class mqtt_handler:
         self.HAIP = '0.0.0.0'
         self.MQTT_HOST = "mqtt"
 
-        self.TOPIC_TOUCH = f"wallpanel/{nodename}/touch"
         self.TOPIC_HAIP = f"wallpanel/{nodename}/haip-{locationgp}"
 
         self.TOPIC_CONTROL = f"wallpanel/{nodename}/control"
