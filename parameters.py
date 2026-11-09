@@ -1,4 +1,5 @@
+import subprocess
 kiosk_baseurl: str= ''
 kiosk_reduced_baseurl: str= ''
-browser = None
+browser: subprocess.Popen
 

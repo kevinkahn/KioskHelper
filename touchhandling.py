@@ -26,7 +26,8 @@ def find_touchscreen_event():
                 log.item(f"[touch] Using {dev} ({name})",level=2)
                 return dev
 
-        except Exception:
+        except Exception as e:
+            log.item(f'Benign exception noted in find_touchscreen_event: {e}',level=2)
             continue
 
     log.item("[touch] No touchscreen found, falling back to event0")

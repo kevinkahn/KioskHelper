@@ -142,7 +142,7 @@ def get_seconds_until_next(target_times):
 def periodic_browser_restart(timelist, haip):
     log.item(f"Restart browser at {timelist}")
     while True:
-        sleep_duration = (get_seconds_until_next(timelist))
+        sleep_duration = get_seconds_until_next(timelist)
         jitter = randint(0, 120)
         log.item(f"Sleeping efficiently for {sleep_duration} + {jitter} seconds")
         time.sleep(sleep_duration + jitter)
@@ -275,8 +275,9 @@ if __name__ == "__main__":
             waittime +=30
             notify(f"Still waiting {waittime} for text.{nodename.replace('-','_')}_baseurl")
             log.item(f'Still waiting {waittime} for text.{nodename.replace('-','_')}_baseurl')
+        # noinspection PyUnreachableCode
         clear()
-        #mh.mq.publish_state(p.kiosk_baseurl)
+        # noinspection PyUnreachableCode
         time.sleep(1)
     else:
         log.item(f'HA baseurl already set as {p.kiosk_baseurl}')
