@@ -159,20 +159,29 @@ if __name__ == "__main__":
     log.item("Kiosk Starting")
 
     # Get kiosk IP and name
-    localnetcode = get_local_ip_gp()
-    log.item(f"Local ip network: {localnetcode}")
+    if os.path.exists("/home/pi/forcenet1"):
+        localnetcode = 1
+        forcednet = "(Forced)"
+    elif os.path.exists("/home/pi/forcenet2"):
+        localnetcode = 2
+        forcednet = "(Forced)"
+    else:
+        localnetcode = get_local_ip_gp()
+        forcednet = ""
+
+    log.item(f"Local ip network: {localnetcode} {forcednet}")
+
     nodename = os.uname().nodename
 
-    # Kiosk name is the name for the browser in HA (strip the rpu-)
+    # Kiosk name is the name for the browser in HA (strip the rpi-)
     kioskname = f"kiosk_{nodename.replace('rpi-', '')}"
     kioskbaseurlentity = f"{kioskname}_baseurl"
-    log.item(
-        f"Kiosk Info: node: {nodename} kioskname: {kioskname} kioskbaseurlentity: {kioskbaseurlentity} kiosk_baseurl: {p.kiosk_baseurl}",
-        level=3)
 
     locationgp = ('error', 'pdx', 'pgaw')[localnetcode]  # user for group browser commands
     HA_ID = ('error', 'HASS', 'HASSpga')[localnetcode]
-    log.item(f"Using local network: {localnetcode} Local group: {locationgp} HA Name: {HA_ID}")
+    log.item(
+        f"Kiosk Info: Node: {nodename} Kiosk name: {kioskname} Kiosk baseurlentity: {kioskbaseurlentity} Kiosk baseurl: {p.kiosk_baseurl}")
+    log.item(f"            Local network: {localnetcode} Local group: {locationgp} HA Name: {HA_ID}")
 
     # Fix access issue
     subprocess.run(["sudo", "chgrp", "input", "/dev/uinput"])
