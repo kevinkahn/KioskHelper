@@ -27,8 +27,8 @@ class mqtt_handler:
         self.STATE_TOPIC = f"{HA_ID}/text/{kioskbaseurlentity}/state"
         self.COMMAND_TOPIC = f"{HA_ID}/text/{kioskbaseurlentity}/set"
 
-        self.CONTROL_TOPICS = [self.TOPIC_CONTROL, self.TOPIC_GP_CONTROL, self.TOPIC_ALL_CONTROL]
-        self.BRIGHTNESS_TOPICS = [self.TOPIC_SCREENLEVEL, self.TOPIC_GP_SCREENLEVEL, self.TOPIC_ALL_SCREENLEVEL]
+        self.CONTROL_TOPICS = [self.TOPIC_ALL_CONTROL, self.TOPIC_GP_CONTROL, self.TOPIC_CONTROL]
+        self.BRIGHTNESS_TOPICS = [self.TOPIC_ALL_SCREENLEVEL, self.TOPIC_GP_SCREENLEVEL, self.TOPIC_SCREENLEVEL]
 
         self.nodename = nodename
         self.lastmessagetime = time.time()
