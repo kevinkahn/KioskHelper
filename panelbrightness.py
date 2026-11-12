@@ -1,6 +1,7 @@
 import os
 import threading
 import kiosklog as log
+import parameters as p
 
 class BrightnessManager:
     def __init__(self, timeout=10, issuebrowsercontrol=None):
@@ -76,9 +77,11 @@ class BrightnessManager:
             self.touchesactive = False
 
     def returntobase(self):
-        log.item(f"Return to base url")
+
         if self.issuebrowsercontrol is not None:
+            log.item(f"Return to base url")
             self.issuebrowsercontrol('gotourl')
+
 
     def returntobaseurltimer(self):
         with self.lock:

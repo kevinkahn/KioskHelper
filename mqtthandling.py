@@ -74,6 +74,9 @@ class mqtt_handler:
                 elif value[0] == 'loglevel':
                     log.LogLevel = int(value[1])
                     log.item(f"[loglevel] Set loglevel to {value[1]}")
+                elif value[0] == 'clearmaintenance':
+                    log.item(f"[clearmaintenance] Clear maintenance flag")
+                    p.inmaintpages = False
                 else:
                     log.item(f"[on_message] Unknown MQTT command: {topic}:  {value}")
             elif topic == self.STATE_TOPIC:

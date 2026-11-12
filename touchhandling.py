@@ -127,7 +127,10 @@ def touch_thread(dev, ui):
                     log.item(f"Swipe detected: {direction}: {dx}, {dy}, {dist}", level=2)
                     log.item(f"Coords: {start_x} {end_x}, {start_y} {end_y}", level=2)
                     if direction in ("Down","Up"): mh.mq.sendbrowsercontrol("refresh")
-                    if direction in ("Right","Left"): mh.mq.sendbrowsercontrol("maintenance")
+                    if direction in ("Right","Left"):
+                        p.inmaintpages = True
+                        log.item('Set maintenance mode and send control')
+                        mh.mq.sendbrowsercontrol("maintenance")
                     tap_count = 0
                 elif duration < TAP_MAX_TIME:
                     # Check for Taps
@@ -149,7 +152,11 @@ def touch_thread(dev, ui):
                     elif tap_count == 1:
                         log.item(f"Single tap detected at {current_x}, {current_y}", level=3)
                         log.item("Start a timer to return to base url", level=2)
-                        pb.bm.returntobaseurltimer()
+                        if not p.inmaintpages:
+                            # noinspection PyUnreachableCode
+                            pb.bm.returntobaseurltimer()
+                        else:
+                            log.item(f'Suppress auto return timer')
         if swallow_gesture == 'no':
             log.item(f"Reflect event {categorize(event)}",level=3)
             ui.write_event(event)

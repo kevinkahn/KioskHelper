@@ -228,7 +228,7 @@ if __name__ == "__main__":
                             "--disable-composited-antialiasing",
                             "--enable-oop-rasterization","--disable-background-networking","--disable-component-update",
                             "--animation-duration-scale=0","--wm-window-animations-disabled",
-                            "--disable-software-compositing-surface","--disable-gpu-vsync=false"]
+                            "--disable-software-compositing-surface","--disable-gpu-vsync=false", "--disable-gpu", "--use-gl=angle", "--use-angle=swiftshader"]
         log.item(f"Suppress gpu: {extrachromeflags}")
     else:
         extrachromeflags = []
