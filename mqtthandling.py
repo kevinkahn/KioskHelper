@@ -71,8 +71,8 @@ class mqtt_handler:
                         subprocess.run(["git", "pull"], cwd="/home/pi/kiosk", stdout=f, stderr=subprocess.STDOUT)
                         subprocess.run(['cp', 'panel.service', '/home/pi/.config/systemd/user'], cwd="/home/pi/kiosk", stdout=f, stderr=subprocess.STDOUT)
                         subprocess.run(['systemctl', '--user', 'daemon-reload'])
-                    subprocess.run(["systemctl","--user","restart","panel"], stdout=f, stderr=subprocess.STDOUT)
-                    log.item("[restart] Restart kiosk")
+                        log.item("[restart] Restart kiosk")
+                        subprocess.run(["systemctl","--user","restart","panel"], stdout=f, stderr=subprocess.STDOUT)
                 elif value[0] == 'loglevel':
                     log.LogLevel = int(value[1])
                     log.item(f"[loglevel] Set loglevel to {value[1]}")
