@@ -50,7 +50,7 @@ class mqtt_handler:
                 elif value[0] == 'active':
                     pb.bm.setactivescreenlevel(max(0, min(255, int(value[1]))))
                 elif value[0] == 'timeout':
-                    pb.bm.screenreturntodim(int(value[1]))
+                    pb.bm.settimeout(int(value[1]))
                 else:
                     log.item(f"Unknown brightness command: {value}")
             elif topic in self.CONTROL_TOPICS:
