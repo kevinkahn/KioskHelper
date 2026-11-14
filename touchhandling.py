@@ -156,7 +156,7 @@ def touch_thread(dev, ui):
                             # noinspection PyUnreachableCode
                             pb.bm.returntobaseurltimer()
                         else:
-                            log.item(f'Suppress auto return timer')
+                            log.item(f'Suppress auto return timer', level=3)
         if swallow_gesture == 'no':
             log.item(f"Reflect event {categorize(event)}",level=3)
             ui.write_event(event)
@@ -169,5 +169,3 @@ def touch_thread(dev, ui):
                 ui.write_event(event)
                 swallow_gesture = 'no'
 
-            #if event.type == ecodes.EV_SYN:
-            #    ui.syn()
