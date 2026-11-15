@@ -34,16 +34,18 @@ def get_local_ip_gp():
             log.item(f"Failed to get local ip address: {e}")
             if 'f{e}' == '[Errno 101] Network is unreachable':
                 failcnt += 1
+                Path('/home/pi/networkissue').touch()
                 log.item(f'Networking not up (f{failcnt})')
-                if failcnt > 5:
+                if failcnt > 12:
                     log.item(f'Try rebooting kiosk')
                     subprocess.run(["sudo", "reboot"])
-                    #todo This should note previous efforts and throttle and also not rotate log
             ip = '127.0.0.1'
-            time.sleep(5)
+            time.sleep(10)
         finally:
             s.close()
         netnumber = int(ip.split('.')[2])
+        # Clear any previous issue with network access
+        Path("networkissue").unlink(missing_ok=True)
 
     return netnumber
 
@@ -162,8 +164,11 @@ def periodic_browser_restart(timelist, haip):
 if __name__ == "__main__":
 
     # Rotate logs
-    log.rotate_logs()
-    log.item("Kiosk Starting")
+    if not os.path.exists("/home/pi/networkissue"):
+        log.rotate_logs()
+        log.item("Kiosk Starting")
+    else:
+        log.item("Skip rotation on network issue")
 
     # Get kiosk IP and name
     if os.path.exists("/home/pi/forcenet1"):
