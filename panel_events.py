@@ -21,10 +21,9 @@ from notification import notify, clear
 def get_local_ip_gp():
     # return the local net number for choosing local HA
     netnumber = 0
+    failcnt = 0
     while netnumber == 0:
-        time.sleep(3)
         log.item(f"[get_local_ip_gp] Try getting local ip address")
-
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
          # Does not have to be reachable to extract the local interface IP
@@ -33,7 +32,15 @@ def get_local_ip_gp():
             log.item(f"Local IP address: {ip}")
         except Exception as e:
             log.item(f"Failed to get local ip address: {e}")
+            if 'f{e}' == '[Errno 101] Network is unreachable':
+                failcnt += 1
+                log.item(f'Networking not up (f{failcnt})')
+                if failcnt > 5:
+                    log.item(f'Try rebooting kiosk')
+                    subprocess.run(["sudo", "reboot"])
+                    #todo This should note previous efforts and throttle and also not rotate log
             ip = '127.0.0.1'
+            time.sleep(5)
         finally:
             s.close()
         netnumber = int(ip.split('.')[2])
@@ -120,7 +127,7 @@ def start_browser(burl, kiosknm, haip):
         extrachromeflags + [f"{url}?BrowserID={kiosknm}"] )
     log.item("Browser started")
 
-def get_seconds_until_next(target_times):
+def get_seconds_until_next(target_times) -> int:
     """Calculates exactly how many seconds to sleep until the next event."""
     now = datetime.now()
     seconds_distances = []
