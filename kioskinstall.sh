@@ -73,6 +73,7 @@ fi
 #  </keyboard>
 #</labwc_config>
 #" >> rc.xml
+echo "WLR_NO_HARDWARE_CURSORS=1" >> /home/pi/.config/labwc/environmemt
 echo 'KERNEL=="uinput", SUBSYSTEM=="misc", OPTIONS+="static_node=uinput", TAG+="uaccess", GROUP="input", MODE="0660"' | sudo tee /etc/udev/rules.d/99-uinput.rules
 echo 'ATTRS{name}=="Filtered Touchscreen Flipped", ENV{LIBINPUT_CALIBRATION_MATRIX}="-1 0 1 0 -1 1 0 0 1"' | sudo tee /etc/udev/rules.d/99-virtual-touchscreen.rules
 echo "source .bashrc to get bin in path"
