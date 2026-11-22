@@ -49,32 +49,18 @@ def get_local_ip_gp():
 
     return netnumber
 
-browser: subprocess.Popen | None = None
 
 def handle_sigterm(signum, _frame):
     """Callback function triggered when SIGTERM is received."""
     log.item(f"Received SIGTERM (signal {signum}). Cleaning up resources...")
     try:
-        if not browser is None:
-            browser.terminate()
+        if not p.browser is None:
+            p.browser.terminate()
         log.item("Terminated browser")
     except Exception as e:
         log.item(f"Failed to terminate browser: {e}")
     sys.exit(0)
 signal.signal(signal.SIGTERM, handle_sigterm)
-
-def monitor_thread(target_thread, check_interval=5):
-    log.item(f"Monitoring {target_thread.name} thread with check interval: {check_interval}")
-    while True:
-        target_thread.join(timeout=check_interval)
-        if time.time() - mh.mq.lastmessagetime > 64800: # 18 hours
-            log.item(f'MQTT Quiet for 18 hours!')
-            mh.mq.lastmessagetime = time.time()
-        if not target_thread.is_alive():
-            # Trigger your alert here
-            log.item(f"[ALERT] The MQTT thread has unexpectedly terminated!")
-            break
-    sys.exit(99)
 
 def initialize_browser_environment(profile_dir, kiosknm, haip):
     initurl = f"{haip}/lovelace/0?BrowserID={kiosknm}"
@@ -236,11 +222,18 @@ if __name__ == "__main__":
         log.item(f"Error getting model {raw_model}")
     log.item(f"Raspberry Pi model: {model}")
     if model in  ("3 Model B Plus", "3 Model B"):
-        extrachromeflags = [ "--disable-low-res-tiling","--enable-low-end-device-mode",
-                            "--disable-composited-antialiasing",
-                            "--enable-oop-rasterization","--disable-background-networking","--disable-component-update",
-                            "--animation-duration-scale=0","--wm-window-animations-disabled",
-                            "--disable-software-compositing-surface","--disable-gpu-vsync=false", "--disable-gpu", "--use-gl=angle", "--use-angle=swiftshader"]
+        extrachromeflags = [
+            "--ozone-platform=wayland",
+            "--disable-gpu",
+            "--disable-gpu-compositing",
+            "--enable-low-end-device-mode",
+            "--disable-low-res-tiling",
+            "--disable-composited-antialiasing",
+            "--disable-background-networking",
+            "--disable-component-update",
+            "--animation-duration-scale=0",
+            "--wm-window-animations-disabled",
+        ]
         log.item(f"Suppress gpu: {extrachromeflags}")
     else:
         extrachromeflags = []
@@ -263,7 +256,7 @@ if __name__ == "__main__":
     th.kioskname = kioskname
     if browserrestarttimes:
         log.item("Start Browser Restart Thread")
-        threading.Thread(target=periodic_browser_restart, args=(browserrestarttimes,)).start()
+        threading.Thread(target=periodic_browser_restart, args=(browserrestarttimes,HAIP)).start()
 
     if p.kiosk_baseurl == '':
     # haven't set up this kiosk in HA yet else retained MQTT message would have set this
